@@ -39,7 +39,7 @@ func newUsersListModel() *UsersListModel {
 
 	newLoginButton := newButton("New Login")
 	newLoginButton.SetActive(true)
-	newLoginButton.OnAction(func() tea.Msg { return PushPageMsg{newLoginModel()} })
+	newLoginButton.OnAction(func() tea.Msg { return PushPageMsg{newSignupModel()} })
 
 	exitButton := newButton("Exit")
 	exitButton.SetActive(true)

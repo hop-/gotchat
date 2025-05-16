@@ -2,6 +2,7 @@ package app
 
 import (
 	"github.com/hop-/gotchat/internal/core"
+	"github.com/hop-/gotchat/internal/logic"
 	"github.com/hop-/gotchat/internal/ui"
 )
 
@@ -9,11 +10,13 @@ type Builder struct {
 	em       *core.EventManager
 	ui       ui.UI
 	services []core.Service
+	appLogic *logic.AppLogic
 }
 
 func NewBuilder() *Builder {
 	return &Builder{
 		services: make([]core.Service, 0),
+		appLogic: logic.New(),
 	}
 }
 
@@ -50,8 +53,9 @@ func (b *Builder) Build() *App {
 	}
 
 	return &App{
-		eventManager: b.em,
-		services:     container,
-		ui:           b.ui,
+		b.em,
+		container,
+		b.ui,
+		b.appLogic,
 	}
 }

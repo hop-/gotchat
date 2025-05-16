@@ -12,10 +12,11 @@ type App struct {
 	eventManager *core.EventManager
 	services     *core.ServiceContainer
 	ui           ui.UI
+	logic        *logic.AppLogic
 }
 
-func (a *App) Init() error {
-	return a.services.InitAll()
+func (app *App) Init() error {
+	return app.services.InitAll()
 }
 
 func (a *App) Run(ctx context.Context) error {
@@ -29,16 +30,16 @@ func (a *App) Run(ctx context.Context) error {
 			continue
 		}
 
-		logic.Handle(event)
+		a.logic.Handle(event)
 
 		// err = a.ui.Send(update)
 	}
 }
 
-func (a *App) Close() {
+func (app *App) Close() {
 	// TODO: Handle errors
-	a.services.CloseAll()
+	app.services.CloseAll()
 
 	// TODO: Handle error
-	a.ui.Close()
+	app.ui.Close()
 }

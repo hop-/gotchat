@@ -5,7 +5,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-type LoginModel struct {
+type SignupModel struct {
 	// Screen component
 	Screen
 	// Focusable container
@@ -14,14 +14,14 @@ type LoginModel struct {
 	// Components
 	usernameInput *TextInput
 	passwordInput *TextInput
-	submitButton  *Button
+	loginButton   *Button
 	backButton    *Button
 
 	// Stack component
 	stack *Stack
 }
 
-func newLoginModel() *LoginModel {
+func newSignupModel() *SignupModel {
 	usernameInput := newTextInput("Username")
 	usernameInput.Placeholder = "Enter your nickname"
 	usernameInput.CharLimit = 128
@@ -34,32 +34,32 @@ func newLoginModel() *LoginModel {
 	passwordInput.EchoMode = textinput.EchoPassword
 	passwordInput.EchoCharacter = '•'
 
-	submitButton := newButton("Submit")
-	submitButton.SetActive(false)
-	submitButton.OnAction(tea.Quit)
+	loginButton := newButton("Login")
+	loginButton.SetActive(false)
+	loginButton.OnAction(func() tea.Msg { return SetNewPageMsg{newChatViewModel()} })
 
 	backButton := newButton("Back")
 	backButton.SetActive(true)
 	backButton.OnAction(func() tea.Msg { return PopPageMsg{} })
 
-	return &LoginModel{
+	return &SignupModel{
 		Screen{},
-		FocusContainer{[]FocusableModel{usernameInput, passwordInput, submitButton, backButton}, 0},
+		FocusContainer{[]FocusableModel{usernameInput, passwordInput, loginButton, backButton}, 0},
 		usernameInput,
 		passwordInput,
-		submitButton,
+		loginButton,
 		backButton,
-		newStack(Vertical, 3, usernameInput, passwordInput, newStack(Horizontal, 2, submitButton, backButton)),
+		newStack(Vertical, 3, usernameInput, passwordInput, newStack(Horizontal, 2, loginButton, backButton)),
 	}
 }
 
-func (m *LoginModel) Init() tea.Cmd {
+func (m *SignupModel) Init() tea.Cmd {
 	m.updateActiveStates()
 
 	return tea.Batch(m.FocusContainer.Init(), m.stack.Init())
 }
 
-func (m *LoginModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m *SignupModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	// Update screen size
 	m.Screen.update(msg)
 	m.updateActiveStates()
@@ -75,20 +75,20 @@ func (m *LoginModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
-func (m *LoginModel) updateActiveStates() {
+func (m *SignupModel) updateActiveStates() {
 	if m.usernameInput.Value() != "" {
 		m.passwordInput.SetActive(true)
 		if m.passwordInput.Value() != "" {
-			m.submitButton.SetActive(true)
+			m.loginButton.SetActive(true)
 		} else {
-			m.submitButton.SetActive(false)
+			m.loginButton.SetActive(false)
 		}
 	} else {
 		m.passwordInput.SetActive(false)
-		m.submitButton.SetActive(false)
+		m.loginButton.SetActive(false)
 	}
 }
 
-func (m *LoginModel) View() string {
+func (m *SignupModel) View() string {
 	return m.Screen.view(m.stack.View())
 }

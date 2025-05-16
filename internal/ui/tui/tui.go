@@ -10,7 +10,6 @@ type Tui struct {
 
 func New() *Tui {
 	rootModel := newRootModel(newUsersListModel())
-	//rootModel := newLoginModel()
 	p := tea.NewProgram(rootModel)
 
 	return &Tui{p}
@@ -28,6 +27,7 @@ func (ui *Tui) Run() error {
 }
 
 func (ui *Tui) Close() error {
-	// TODO: Send close signal to the program
+	ui.p.Quit()
+
 	return nil
 }

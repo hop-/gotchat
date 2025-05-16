@@ -20,6 +20,14 @@ func (m *RootModel) currentPage() tea.Model {
 	return m.pageStack[len(m.pageStack)-1]
 }
 
+func (m *RootModel) updateCurrnetPage(page tea.Model) {
+	if len(m.pageStack) == 0 {
+		return
+	}
+
+	m.pageStack[len(m.pageStack)-1] = page
+}
+
 func (m *RootModel) pushPage(page tea.Model) {
 	m.pageStack = append(m.pageStack, page)
 }
@@ -34,6 +42,10 @@ func (m *RootModel) Init() tea.Cmd {
 
 func (m *RootModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
+	case SetNewPageMsg:
+		m.pageStack = []tea.Model{msg.Page}
+
+		return m, m.currentPage().Init()
 	case PushPageMsg:
 		m.pushPage(msg.Page)
 
@@ -48,7 +60,7 @@ func (m *RootModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	page, cmd := m.currentPage().Update(msg)
 
-	m.pageStack[len(m.pageStack)-1] = page
+	m.updateCurrnetPage(page)
 
 	return m, cmd
 }

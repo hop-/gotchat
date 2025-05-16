@@ -42,6 +42,10 @@ type FocusableActivatableModel interface {
 	Activatable
 }
 
+type SetNewPageMsg struct {
+	Page tea.Model
+}
+
 type PushPageMsg struct {
 	Page tea.Model
 }
