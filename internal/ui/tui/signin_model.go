@@ -9,7 +9,7 @@ type SigninModel struct {
 	// Screen component
 	Screen
 	// Focusable container
-	FocusContainer
+	*FocusContainer
 
 	// Components
 	username      *Label
@@ -42,13 +42,13 @@ func newSigninModel(username string) *SigninModel {
 
 	return &SigninModel{
 		Screen{},
-		FocusContainer{[]FocusableModel{passwordInput, loginButton, backButton}, 0},
+		&FocusContainer{[]FocusableModel{passwordInput, loginButton, backButton}, 0},
 
 		usernameLabel,
 		passwordInput,
 		loginButton,
 		backButton,
-		newStack(Vertical, 3, usernameLabel, passwordInput, newStack(Horizontal, 2, loginButton, backButton)),
+		newStack(Vertical, 1, usernameLabel, passwordInput, newStack(Horizontal, 3, loginButton, backButton)),
 	}
 }
 
@@ -59,19 +59,15 @@ func (m *SigninModel) Init() tea.Cmd {
 }
 
 func (m *SigninModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	// Update screen size
-	m.Screen.update(msg)
+	// Handle screen updates
+	screenCmd := m.Screen.Update(msg)
+
 	m.updateActiveStates()
-	switch msg := msg.(type) {
-	case tea.KeyMsg:
-		if msg.String() == "ctrl+c" {
-			return m, tea.Quit
-		}
-	}
 
-	_, cmd := m.FocusContainer.Update(msg)
+	fc, cmd := m.FocusContainer.Update(msg)
+	m.FocusContainer = fc
 
-	return m, cmd
+	return m, tea.Batch(screenCmd, cmd)
 }
 
 func (m *SigninModel) updateActiveStates() {
@@ -83,5 +79,5 @@ func (m *SigninModel) updateActiveStates() {
 }
 
 func (m *SigninModel) View() string {
-	return m.Screen.view(m.stack.View())
+	return m.Screen.View(m.stack.View())
 }

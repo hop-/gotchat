@@ -17,7 +17,7 @@ type UsersListModel struct {
 	// Screen component
 	Screen
 	// Focusable component
-	FocusContainer
+	*FocusContainer
 
 	// Component
 	list *ItemList
@@ -54,9 +54,9 @@ func newUsersListModel() *UsersListModel {
 
 	return &UsersListModel{
 		Screen{},
-		FocusContainer{[]FocusableModel{l, newLoginButton, exitButton}, 0},
+		&FocusContainer{[]FocusableModel{l, newLoginButton, exitButton}, 0},
 		l,
-		newStack(Vertical, 3, l, newStack(Horizontal, 2, newLoginButton, exitButton)),
+		newStack(Vertical, 2, l, newStack(Horizontal, 3, newLoginButton, exitButton)),
 	}
 }
 
@@ -65,23 +65,20 @@ func (m *UsersListModel) Init() tea.Cmd {
 }
 
 func (m *UsersListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	// Update screen size
-	m.Screen.update(msg)
+	// Handle screen updates
+	screenCmd := m.Screen.Update(msg)
 
-	switch msg := msg.(type) {
-	case tea.KeyMsg:
-		if msg.String() == "ctrl+c" {
-			return m, tea.Quit
-		}
+	switch msg.(type) {
 	case tea.WindowSizeMsg:
-		m.list.SetSize(msg.Width/2, msg.Height/2)
+		m.list.SetSize(m.Screen.GetWidth()/2, m.Screen.GetHeight()/2)
 	}
 
-	_, cmd := m.FocusContainer.Update(msg)
+	fc, cmd := m.FocusContainer.Update(msg)
+	m.FocusContainer = fc
 
-	return m, cmd
+	return m, tea.Batch(screenCmd, cmd)
 }
 
 func (m *UsersListModel) View() string {
-	return m.Screen.view(m.stack.View())
+	return m.Screen.View(m.stack.View())
 }
