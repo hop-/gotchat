@@ -36,6 +36,13 @@ func newUsersListModel() *UsersListModel {
 		User{"Jujupuluz", "last login December 2021"},
 	})
 	l.Title = "Users"
+	l.OnSelect(func(item list.Item) tea.Cmd {
+		if user, ok := item.(User); ok {
+			return func() tea.Msg { return PushPageMsg{newSigninModel(user.Title())} }
+		}
+
+		return nil
+	})
 
 	newLoginButton := newButton("New Login")
 	newLoginButton.SetActive(true)

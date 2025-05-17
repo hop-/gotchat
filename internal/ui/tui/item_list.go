@@ -5,10 +5,14 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
+type ListOnAction func(item list.Item) tea.Cmd
+
 type ItemList struct {
 	list.Model
 
 	focus bool
+
+	onSelectAction ListOnAction
 }
 
 func newItemList(items []list.Item) *ItemList {
@@ -29,8 +33,17 @@ func (il *ItemList) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	var cmd tea.Cmd
 	il.Model, cmd = il.Model.Update(msg)
+	cmds := []tea.Cmd{cmd}
 
-	return il, cmd
+	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		switch msg.String() {
+		case "enter":
+			cmds = append(cmds, il.onSelectAction(il.SelectedItem()))
+		}
+	}
+
+	return il, tea.Batch(cmds...)
 }
 
 func (il *ItemList) View() string {
@@ -53,4 +66,8 @@ func (il *ItemList) Blur() tea.Cmd {
 
 func (il *ItemList) Focused() bool {
 	return il.focus
+}
+
+func (il *ItemList) OnSelect(action ListOnAction) {
+	il.onSelectAction = action
 }
