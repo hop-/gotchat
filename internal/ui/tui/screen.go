@@ -30,10 +30,10 @@ func (m *Screen) View(content string) string {
 	return boarderStyle.Render(lipgloss.Place(screenWidth, screenHeight, lipgloss.Center, lipgloss.Center, content))
 }
 
-func (m *Screen) GetWidth() int {
+func (m *Screen) Width() int {
 	return screenWidth
 }
 
-func (m *Screen) GetHeight() int {
+func (m *Screen) Height() int {
 	return screenHeight
 }

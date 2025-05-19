@@ -68,6 +68,13 @@ func (il *ItemList) Focused() bool {
 	return il.focus
 }
 
+func (il *ItemList) SetSize(width, height int) {
+	il.Model.SetSize(width, height)
+
+	// Workaround for list width issue - https://github.com/charmbracelet/bubbles/issues/744
+	il.Model.Styles.HelpStyle = il.Model.Styles.HelpStyle.Width(width - 2)
+}
+
 func (il *ItemList) OnSelect(action ListOnAction) {
 	il.onSelectAction = action
 }

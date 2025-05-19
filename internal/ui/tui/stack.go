@@ -17,7 +17,7 @@ const (
 type Stack struct {
 	components  []tea.Model
 	orientation Orientation
-	delimiter   string
+	gap         string
 	draw        func(...string) string
 }
 
@@ -65,9 +65,17 @@ func (s *Stack) View() string {
 	for i, component := range s.components {
 		components = append(components, component.View())
 		if i < len(s.components)-1 {
-			components = append(components, s.delimiter)
+			components = append(components, s.gap)
 		}
 	}
 
 	return s.draw(components...)
+}
+
+func (s *Stack) Gap() string {
+	return s.gap
+}
+
+func (s *Stack) Components() []tea.Model {
+	return s.components
 }

@@ -11,9 +11,18 @@ var (
 			Align(lipgloss.Center).
 			Padding(0, 0)
 
-	focusedStyle = lipgloss.NewStyle().Foreground(lipgloss.AdaptiveColor{Light: "255", Dark: "187"})
-	blurredStyle = lipgloss.NewStyle().Foreground(lipgloss.AdaptiveColor{Light: "240", Dark: "240"})
-	noStyle      = lipgloss.NewStyle()
+	focusedStyle      = lipgloss.NewStyle().Foreground(lipgloss.AdaptiveColor{Light: "255", Dark: "187"})
+	blurredStyle      = lipgloss.NewStyle().Foreground(lipgloss.AdaptiveColor{Light: "240", Dark: "240"})
+	noStyle           = lipgloss.NewStyle()
+	focusedTitleStyle = lipgloss.NewStyle().
+				Background(lipgloss.Color("62")).
+				Foreground(lipgloss.Color("230")).
+				Padding(0, 1)
+	blurredTitleStyle = lipgloss.NewStyle().
+				Foreground(lipgloss.Color("240")).
+				Background(lipgloss.Color("244")).
+				Padding(0, 1)
+	titleBarStyle = lipgloss.NewStyle().Padding(0, 0, 1, 2)
 )
 
 type Focusable interface {

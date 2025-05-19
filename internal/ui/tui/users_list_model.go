@@ -70,7 +70,7 @@ func (m *UsersListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	switch msg.(type) {
 	case tea.WindowSizeMsg:
-		m.list.SetSize(m.Screen.GetWidth()/2, m.Screen.GetHeight()/2)
+		m.list.SetSize(m.Screen.Width()/2, m.Screen.Height()/2)
 	}
 
 	fc, cmd := m.FocusContainer.Update(msg)
