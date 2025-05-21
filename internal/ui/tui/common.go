@@ -60,3 +60,9 @@ type PushPageMsg struct {
 }
 
 type PopPageMsg struct{}
+
+type InternalQuitMsg struct{}
+
+func internalQuit() tea.Msg {
+	return InternalQuitMsg{}
+}

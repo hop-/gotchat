@@ -1,14 +1,19 @@
 package tui
 
-import tea "github.com/charmbracelet/bubbletea"
+import (
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/hop-/gotchat/internal/core"
+)
 
 type RootModel struct {
 	pageStack []tea.Model
+	emitter   core.EventEmitter
 }
 
-func newRootModel(initialPage tea.Model) *RootModel {
+func newRootModel(initialPage tea.Model, emitter core.EventEmitter) *RootModel {
 	return &RootModel{
-		pageStack: []tea.Model{initialPage},
+		[]tea.Model{initialPage},
+		emitter,
 	}
 }
 
@@ -54,8 +59,10 @@ func (m *RootModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if len(m.pageStack) > 1 {
 			m.popPage()
 		} else {
-			return m, tea.Quit
+			return m, internalQuit
 		}
+	case InternalQuitMsg:
+		m.emitter.Emit(core.QuitEvent{})
 	}
 
 	page, cmd := m.currentPage().Update(msg)

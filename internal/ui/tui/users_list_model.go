@@ -50,7 +50,7 @@ func newUsersListModel() *UsersListModel {
 
 	exitButton := newButton("Exit")
 	exitButton.SetActive(true)
-	exitButton.OnAction(tea.Quit)
+	exitButton.OnAction(internalQuit)
 
 	return &UsersListModel{
 		Screen{},

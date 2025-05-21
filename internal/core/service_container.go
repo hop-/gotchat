@@ -1,6 +1,10 @@
 package core
 
-import "fmt"
+import (
+	"context"
+	"fmt"
+	"sync"
+)
 
 type ServiceContainer struct {
 	services []Service
@@ -24,9 +28,9 @@ func (c *ServiceContainer) InitAll() error {
 	return nil
 }
 
-func (c *ServiceContainer) RunAll() error {
+func (c *ServiceContainer) RunAll(ctx context.Context, wg *sync.WaitGroup) error {
 	for _, s := range c.services {
-		go s.Run()
+		go s.Run(ctx, wg)
 	}
 
 	return nil

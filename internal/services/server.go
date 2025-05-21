@@ -1,7 +1,9 @@
 package services
 
 import (
+	"context"
 	"fmt"
+	"sync"
 
 	"github.com/hop-/gotchat/internal/core"
 	"github.com/hop-/gotchat/internal/network"
@@ -40,7 +42,10 @@ func (s *Server) Init() error {
 	return nil
 }
 
-func (s *Server) Run() {
+func (s *Server) Run(ctx context.Context, wg *sync.WaitGroup) {
+	wg.Add(1)
+	defer wg.Done()
+
 	if s.isRunning {
 		// TODO: Handle error
 		return
@@ -52,6 +57,11 @@ func (s *Server) Run() {
 	}
 
 	s.isRunning = true
+	go func() {
+		<-ctx.Done()
+		s.isRunning = false
+		s.listener.Close()
+	}()
 
 	for s.isRunning {
 		conn, err := s.listener.Accept()

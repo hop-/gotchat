@@ -6,6 +6,10 @@ import (
 
 type HandlerFunc func(Event)
 
+type EventEmitter interface {
+	Emit(Event)
+}
+
 type EventManager struct {
 	events chan Event
 }

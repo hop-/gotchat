@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"context"
 	"log"
 
 	"github.com/hop-/gotchat/internal/app"
@@ -18,21 +17,17 @@ func Execute() {
 	}
 
 	defer application.Close()
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	application.Run(ctx)
+	application.Run()
 }
 
 func buildApplication() *app.App {
-	ui := tui.New()
 
 	builder := app.NewBuilder().
-		WithEventManager(100).
-		WithUI(ui)
+		WithEventManager(100)
 	em := builder.GetEventManager()
-	server := services.NewServer("localhost:7665", em)
+	ui := tui.New(em)
+	builder.WithUI(ui)
+	server := services.NewServer(":7665", em)
 	builder.WithService(server)
 
 	return builder.Build()

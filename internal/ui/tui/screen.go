@@ -19,7 +19,7 @@ func (m *Screen) Update(msg tea.Msg) tea.Cmd {
 		screenHeight = msg.Height - 2
 	case tea.KeyMsg:
 		if msg.String() == "ctrl+c" {
-			return tea.Quit
+			return internalQuit
 		}
 	}
 

@@ -2,10 +2,7 @@ package core
 
 type EventType string
 
-type Event interface {
-	Type() EventType
-	Payload() any
-}
+type Event interface{}
 
 type BaseEvent struct {
 	EventType EventType

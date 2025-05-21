@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"sync"
 
 	"github.com/hop-/gotchat/internal/core"
 	"github.com/hop-/gotchat/internal/logic"
@@ -19,21 +20,33 @@ func (app *App) Init() error {
 	return app.services.InitAll()
 }
 
-func (a *App) Run(ctx context.Context) error {
-	go a.ui.Run()
-	a.services.RunAll()
+func (a *App) Run() {
+	ctx, cancel := context.WithCancel(context.Background())
 
-	for {
+	wg := sync.WaitGroup{}
+
+	go a.ui.Run(ctx, &wg)
+
+	a.services.RunAll(ctx, &wg)
+
+	isRunning := true
+	for isRunning {
 		event, err := a.eventManager.Next(ctx)
 		if err != nil {
 			// TODO: Handle error
 			continue
 		}
 
-		a.logic.Handle(event)
+		switch event.(type) {
+		case core.QuitEvent:
+			isRunning = false
+		}
 
-		// err = a.ui.Send(update)
+		a.logic.Handle(event)
 	}
+
+	cancel()
+	wg.Wait()
 }
 
 func (app *App) Close() {
