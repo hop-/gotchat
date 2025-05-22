@@ -5,6 +5,7 @@ import (
 
 	"github.com/hop-/gotchat/internal/app"
 	"github.com/hop-/gotchat/internal/services"
+	"github.com/hop-/gotchat/internal/storage"
 	"github.com/hop-/gotchat/internal/ui/tui"
 )
 
@@ -29,6 +30,10 @@ func buildApplication() *app.App {
 	builder.WithUI(ui)
 	server := services.NewServer(":7665", em)
 	builder.WithService(server)
+
+	storage := storage.NewStorage("file:chat.db")
+
+	builder.WithService(storage)
 
 	return builder.Build()
 }
