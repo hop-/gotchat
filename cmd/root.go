@@ -23,17 +23,23 @@ func Execute() {
 
 func buildApplication() *app.App {
 
+	// Create a new application builder
 	builder := app.NewBuilder().
 		WithEventManager(100)
+	// Get the event manager from the builder
 	em := builder.GetEventManager()
-	ui := tui.New(em)
-	builder.WithUI(ui)
+
+	// Create a new storage and set it in the builder
+	storage := storage.NewStorage("file:chat.db")
+	builder.WithService(storage)
+
+	// Create a new server and set it in the builder
 	server := services.NewServer(":7665", em)
 	builder.WithService(server)
 
-	storage := storage.NewStorage("file:chat.db")
-
-	builder.WithService(storage)
+	// Create a new UI and set it in the builder
+	ui := tui.New(em, storage.GetUserRepository())
+	builder.WithUI(ui)
 
 	return builder.Build()
 }

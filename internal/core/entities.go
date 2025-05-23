@@ -1,11 +1,31 @@
 package core
 
-type Entity struct {
+import "time"
+
+type Entity interface {
+	GetId() string
+}
+
+type BaseEntity struct {
 	Id string
 }
 
+func (e BaseEntity) GetId() string {
+	return e.Id
+}
+
 type User struct {
-	Entity
+	BaseEntity
 	Name      string
-	LastLogin string
+	UniqueId  string
+	LastLogin time.Time
+}
+
+func NewUser(name string) *User {
+	return &User{
+		BaseEntity: BaseEntity{},
+		UniqueId:   generateUuid(),
+		Name:       name,
+		LastLogin:  time.Now(),
+	}
 }

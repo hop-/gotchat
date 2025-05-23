@@ -8,7 +8,7 @@ type UserRepository struct {
 	StorageDb
 }
 
-func NewUserRepository(storage StorageDb) *UserRepository {
+func newUserRepository(storage StorageDb) *UserRepository {
 	return &UserRepository{storage}
 }
 
@@ -48,8 +48,13 @@ func (r *UserRepository) GetAll() ([]*core.User, error) {
 	return users, nil
 }
 
-func (r *UserRepository) Save(user core.User) error {
-	_, err := r.Db().Exec("INSERT INTO users (id, name, last_login) VALUES (?, ?, ?)", user.Id, user.Name, user.LastLogin)
+func (r *UserRepository) Create(user *core.User) error {
+	_, err := r.Db().Exec(
+		"INSERT INTO users (unique_id, name, last_login) VALUES (?, ?, ?)",
+		user.UniqueId,
+		user.Name,
+		user.LastLogin,
+	)
 	if err != nil {
 		return err
 	}
@@ -57,7 +62,7 @@ func (r *UserRepository) Save(user core.User) error {
 	return nil
 }
 
-func (r *UserRepository) Update(user core.User) error {
+func (r *UserRepository) Update(user *core.User) error {
 	_, err := r.Db().Exec("UPDATE users SET name = ?, last_login = ? WHERE id = ?", user.Name, user.LastLogin, user.Id)
 	if err != nil {
 		return err

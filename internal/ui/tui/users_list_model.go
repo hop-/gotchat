@@ -1,8 +1,11 @@
 package tui
 
 import (
+	"fmt"
+
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/hop-/gotchat/internal/core"
 )
 
 type User struct {
@@ -24,9 +27,12 @@ type UsersListModel struct {
 
 	// Stack
 	stack *Stack
+
+	// Repos
+	userRepo core.Repository[core.User]
 }
 
-func newUsersListModel() *UsersListModel {
+func newUsersListModel(userRepo core.Repository[core.User]) *UsersListModel {
 	l := newItemList([]list.Item{
 		User{"HoP", "Last login 5 minutes ago"},
 		User{"Asd", "Last login 2 hours ago"},
@@ -46,7 +52,7 @@ func newUsersListModel() *UsersListModel {
 
 	newLoginButton := newButton("New Login")
 	newLoginButton.SetActive(true)
-	newLoginButton.OnAction(func() tea.Msg { return PushPageMsg{newSignupModel()} })
+	newLoginButton.OnAction(func() tea.Msg { return PushPageMsg{newSignupModel(userRepo)} })
 
 	exitButton := newButton("Exit")
 	exitButton.SetActive(true)
@@ -57,10 +63,17 @@ func newUsersListModel() *UsersListModel {
 		&FocusContainer{[]FocusableModel{l, newLoginButton, exitButton}, 0},
 		l,
 		newStack(Vertical, 2, l, newStack(Horizontal, 3, newLoginButton, exitButton)),
+		userRepo,
 	}
 }
 
 func (m *UsersListModel) Init() tea.Cmd {
+	users := m.getUsers()
+	if len(users) == 0 {
+		// TODO: Disable the list if there are no users
+	}
+	m.list.SetItems(m.getUsers())
+
 	return tea.Batch(m.FocusContainer.Init(), m.stack.Init())
 }
 
@@ -81,4 +94,21 @@ func (m *UsersListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m *UsersListModel) View() string {
 	return m.Screen.View(m.stack.View())
+}
+
+func (m *UsersListModel) getUsers() []list.Item {
+	users, err := m.userRepo.GetAll()
+	if err != nil {
+		return nil
+	}
+
+	items := make([]list.Item, len(users))
+	for i, user := range users {
+		items[i] = User{
+			name: user.Name,
+			info: fmt.Sprintf("Last login: %s", user.LastLogin.String()),
+		}
+	}
+
+	return items
 }

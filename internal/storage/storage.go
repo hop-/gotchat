@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/hop-/gotchat/internal/core"
 	_ "modernc.org/sqlite" // SQLite driver
 )
 
@@ -39,7 +40,7 @@ func (s *Storage) Init() error {
 
 	s.db = db
 
-	return nil
+	return s.createTables()
 }
 
 func (s *Storage) Run(ctx context.Context, wg *sync.WaitGroup) {
@@ -63,6 +64,26 @@ func (s *Storage) Close() error {
 	return nil
 }
 
+func (s *Storage) GetUserRepository() core.Repository[core.User] {
+	return newUserRepository(s)
+}
+
 func (s *Storage) Name() string {
 	return "Storage"
+}
+
+func (s *Storage) createTables() error {
+	// Create the users table if it doesn't exist
+	_, err := s.db.Exec(`
+	CREATE TABLE IF NOT EXISTS users (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		unique_id TEXT UNIQUE,
+		name TEXT,
+		last_login DATETIME
+	)`)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

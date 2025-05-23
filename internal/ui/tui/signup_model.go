@@ -1,8 +1,11 @@
 package tui
 
 import (
+	"fmt"
+
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/hop-/gotchat/internal/core"
 )
 
 type SignupModel struct {
@@ -19,9 +22,12 @@ type SignupModel struct {
 
 	// Stack component
 	stack *Stack
+
+	// Repos
+	userRepo core.Repository[core.User]
 }
 
-func newSignupModel() *SignupModel {
+func newSignupModel(userRepo core.Repository[core.User]) *SignupModel {
 	usernameInput := newTextInput("Username")
 	usernameInput.Placeholder = "Enter your nickname"
 	usernameInput.CharLimit = 128
@@ -36,7 +42,15 @@ func newSignupModel() *SignupModel {
 
 	loginButton := newButton("Login")
 	loginButton.SetActive(false)
-	loginButton.OnAction(func() tea.Msg { return SetNewPageMsg{newChatViewModel()} })
+	loginButton.OnAction(func() tea.Msg {
+		err := userRepo.Create(core.NewUser(usernameInput.Value()))
+		if err != nil {
+			fmt.Println("Error creating user:", err)
+			return nil
+		}
+
+		return SetNewPageMsg{newChatViewModel()}
+	})
 
 	backButton := newButton("Back")
 	backButton.SetActive(true)
@@ -50,6 +64,7 @@ func newSignupModel() *SignupModel {
 		loginButton,
 		backButton,
 		newStack(Vertical, 1, usernameInput, passwordInput, newStack(Horizontal, 3, loginButton, backButton)),
+		userRepo,
 	}
 }
 

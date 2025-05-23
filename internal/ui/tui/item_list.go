@@ -22,6 +22,10 @@ func newItemList(items []list.Item) *ItemList {
 	}
 }
 
+func (il *ItemList) SetItems(items []list.Item) {
+	il.Model.SetItems(items)
+}
+
 func (il *ItemList) Init() tea.Cmd {
 	return nil
 }
