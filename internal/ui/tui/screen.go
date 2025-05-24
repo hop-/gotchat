@@ -10,7 +10,9 @@ var (
 	screenHeight = 24
 )
 
-type Screen struct{}
+type Screen struct {
+	errors []string
+}
 
 func (m *Screen) Update(msg tea.Msg) tea.Cmd {
 	switch msg := msg.(type) {
@@ -27,6 +29,11 @@ func (m *Screen) Update(msg tea.Msg) tea.Cmd {
 }
 
 func (m *Screen) View(content string) string {
+	// TODO: improve
+	for _, e := range m.errors {
+		content += "\n" + e
+	}
+
 	return boarderStyle.Render(lipgloss.Place(screenWidth, screenHeight, lipgloss.Center, lipgloss.Center, content))
 }
 
@@ -36,4 +43,8 @@ func (m *Screen) Width() int {
 
 func (m *Screen) Height() int {
 	return screenHeight
+}
+
+func (m *Screen) AddError(e string) {
+	m.errors = append(m.errors, e)
 }

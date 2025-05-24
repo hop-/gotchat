@@ -33,14 +33,7 @@ type UsersListModel struct {
 }
 
 func newUsersListModel(userRepo core.Repository[core.User]) *UsersListModel {
-	l := newItemList([]list.Item{
-		User{"HoP", "Last login 5 minutes ago"},
-		User{"Asd", "Last login 2 hours ago"},
-		User{"KAKASH", "Last login 1 day ago"},
-		User{"Yesimov", "Last login April 5"},
-		User{"Khkhunj", "Last login June 2022"},
-		User{"Jujupuluz", "last login December 2021"},
-	})
+	l := newItemList([]list.Item{})
 	l.Title = "Users"
 	l.OnSelect(func(item list.Item) tea.Cmd {
 		if user, ok := item.(User); ok {
@@ -99,6 +92,7 @@ func (m *UsersListModel) View() string {
 func (m *UsersListModel) getUsers() []list.Item {
 	users, err := m.userRepo.GetAll()
 	if err != nil {
+		m.Screen.AddError(err.Error())
 		return nil
 	}
 

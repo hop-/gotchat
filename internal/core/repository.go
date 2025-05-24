@@ -1,9 +1,10 @@
 package core
 
 type Repository[T Entity] interface {
-	GetOne(id string) (*T, error)
+	GetOne(id int) (*T, error)
 	GetAll() ([]*T, error)
+	GetAllBy(field string, value any) ([]*T, error)
 	Create(entity *T) error
 	Update(entity *T) error
-	Delete(id string) error
+	Delete(id int) error
 }

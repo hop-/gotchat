@@ -1,24 +1,40 @@
 package core
 
-import "time"
+import (
+	"reflect"
+	"time"
+)
 
 type Entity interface {
-	GetId() string
+	GetId() int
+}
+
+func GetFieldNamesOfEntity[T Entity]() []string {
+	t := reflect.TypeOf((*T)(nil))
+	fieldNames := make([]string, 0, t.NumField())
+
+	for i := 0; i < t.NumField(); i++ {
+		field := t.Field(i)
+		fieldName := field.Tag.Get("name")
+		fieldNames = append(fieldNames, fieldName)
+	}
+
+	return fieldNames
 }
 
 type BaseEntity struct {
-	Id string
+	Id int
 }
 
-func (e BaseEntity) GetId() string {
+func (e BaseEntity) GetId() int {
 	return e.Id
 }
 
 type User struct {
 	BaseEntity
-	Name      string
-	UniqueId  string
-	LastLogin time.Time
+	Name      string    `name:"name"`
+	UniqueId  string    `name:"unique_id"`
+	LastLogin time.Time `name:"last_login"`
 }
 
 func NewUser(name string) *User {
@@ -28,4 +44,42 @@ func NewUser(name string) *User {
 		Name:       name,
 		LastLogin:  time.Now(),
 	}
+}
+
+type Message struct {
+	BaseEntity
+	UserId    string    `name:"user_id"`
+	ChannelId string    `name:"channel_id"`
+	Text      string    `name:"text"`
+	CreatedAt time.Time `name:"created_at"`
+}
+
+func NewMessage(userId, channelId, text string) *Message {
+	return &Message{
+		BaseEntity: BaseEntity{},
+		UserId:     userId,
+		ChannelId:  channelId,
+		Text:       text,
+		CreatedAt:  time.Now(),
+	}
+}
+
+type Channel struct {
+	BaseEntity
+	UniqueId string `name:"unique_id"`
+	Name     string `name:"name"`
+}
+
+func NewChannel(name string) *Channel {
+	return &Channel{
+		BaseEntity: BaseEntity{},
+		Name:       name,
+	}
+}
+
+type Attendance struct {
+	BaseEntity
+	UserId    string    `name:"user_id"`
+	ChannelId string    `name:"channel_id"`
+	CheckedIn time.Time `name:"checked_in"`
 }
