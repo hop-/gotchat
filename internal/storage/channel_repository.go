@@ -1,8 +1,6 @@
 package storage
 
 import (
-	"fmt"
-
 	"github.com/hop-/gotchat/internal/core"
 )
 
@@ -52,7 +50,7 @@ func (r *ChannelRepository) GetAll() ([]*core.Channel, error) {
 
 func (r *ChannelRepository) GetAllBy(field string, value any) ([]*core.Channel, error) {
 	if !isFieldExist[core.Channel](field) {
-		return nil, fmt.Errorf("field is not in the entity")
+		return nil, ErrFieldNotExist
 	}
 
 	rows, err := r.Db().Query("SELECT id, unique_id, name FROM channels where ? = ?", field, value)
@@ -80,11 +78,8 @@ func (r *ChannelRepository) Create(channel *core.Channel) error {
 		channel.UniqueId,
 		channel.Name,
 	)
-	if err != nil {
-		return err
-	}
 
-	return nil
+	return err
 }
 
 func (r *ChannelRepository) Update(channel *core.Channel) error {
@@ -94,18 +89,12 @@ func (r *ChannelRepository) Update(channel *core.Channel) error {
 		channel.Name,
 		channel.Id,
 	)
-	if err != nil {
-		return err
-	}
 
-	return nil
+	return err
 }
 
 func (r *ChannelRepository) Delete(id int) error {
 	_, err := r.Db().Exec("DELETE FROM channels WHERE id = ?", id)
-	if err != nil {
-		return err
-	}
 
-	return nil
+	return err
 }

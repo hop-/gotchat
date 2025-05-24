@@ -1,19 +1,17 @@
 package tui
 
 import (
-	"fmt"
-
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/hop-/gotchat/internal/core"
 )
 
 type User struct {
-	name, info string
+	id, name, lastLogin string
 }
 
 func (i User) Title() string       { return i.name }
-func (i User) Description() string { return i.info }
+func (i User) Description() string { return i.lastLogin }
 func (i User) FilterValue() string { return i.name }
 
 type UsersListModel struct {
@@ -99,8 +97,9 @@ func (m *UsersListModel) getUsers() []list.Item {
 	items := make([]list.Item, len(users))
 	for i, user := range users {
 		items[i] = User{
-			name: user.Name,
-			info: fmt.Sprintf("Last login: %s", user.LastLogin.String()),
+			id:        user.UniqueId,
+			name:      user.Name,
+			lastLogin: FormatLastLogin(user.LastLogin),
 		}
 	}
 

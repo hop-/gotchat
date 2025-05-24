@@ -26,11 +26,7 @@ type ChatViewModel struct {
 
 func newChatViewModel() *ChatViewModel {
 	// Initialize chat list
-	chats := newItemList([]list.Item{
-		User{"Alice", "Hello!"},
-		User{"Bob", "How are you?"},
-		User{"Charlie", "Good morning!"},
-	})
+	chats := newItemList([]list.Item{})
 	chats.Title = "Chats"
 
 	// Initialize chat history

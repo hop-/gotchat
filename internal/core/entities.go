@@ -81,5 +81,5 @@ type Attendance struct {
 	BaseEntity
 	UserId    string    `name:"user_id"`
 	ChannelId string    `name:"channel_id"`
-	CheckedIn time.Time `name:"checked_in"`
+	JoinedAt  time.Time `name:"joined_at"`
 }

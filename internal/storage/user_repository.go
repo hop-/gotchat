@@ -1,8 +1,6 @@
 package storage
 
 import (
-	"fmt"
-
 	"github.com/hop-/gotchat/internal/core"
 )
 
@@ -52,7 +50,7 @@ func (r *UserRepository) GetAll() ([]*core.User, error) {
 
 func (r *UserRepository) GetAllBy(field string, value any) ([]*core.User, error) {
 	if !isFieldExist[core.User](field) {
-		return nil, fmt.Errorf("field is not in the entity")
+		return nil, ErrFieldNotExist
 	}
 
 	rows, err := r.Db().Query("SELECT id, unique_id, name, last_login FROM users where ? = ?", field, value)
@@ -81,27 +79,18 @@ func (r *UserRepository) Create(user *core.User) error {
 		user.Name,
 		user.LastLogin,
 	)
-	if err != nil {
-		return err
-	}
 
-	return nil
+	return err
 }
 
 func (r *UserRepository) Update(user *core.User) error {
 	_, err := r.Db().Exec("UPDATE users SET name = ?, last_login = ? WHERE id = ?", user.Name, user.LastLogin, user.Id)
-	if err != nil {
-		return err
-	}
 
-	return nil
+	return err
 }
 
 func (r *UserRepository) Delete(id int) error {
 	_, err := r.Db().Exec("DELETE FROM users WHERE id = ?", id)
-	if err != nil {
-		return err
-	}
 
-	return nil
+	return err
 }
