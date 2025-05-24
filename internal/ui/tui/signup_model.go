@@ -1,8 +1,6 @@
 package tui
 
 import (
-	"fmt"
-
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/hop-/gotchat/internal/core"
@@ -40,12 +38,20 @@ func newSignupModel(userRepo core.Repository[core.User]) *SignupModel {
 	passwordInput.EchoMode = textinput.EchoPassword
 	passwordInput.EchoCharacter = '•'
 
+	// TODO: add password confirmation input
+
 	loginButton := newButton("Login")
 	loginButton.SetActive(false)
 	loginButton.OnAction(func() tea.Msg {
-		err := userRepo.Create(core.NewUser(usernameInput.Value()))
+		passwordHash, err := core.HashPassword(passwordInput.Value())
 		if err != nil {
-			fmt.Println("Error creating user:", err)
+			// TODO: handle error properly
+			return nil
+		}
+
+		err = userRepo.Create(core.NewUser(usernameInput.Value(), passwordHash))
+		if err != nil {
+			// TODO: handle error properly
 			return nil
 		}
 

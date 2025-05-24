@@ -35,7 +35,7 @@ func newUsersListModel(userRepo core.Repository[core.User]) *UsersListModel {
 	l.Title = "Users"
 	l.OnSelect(func(item list.Item) tea.Cmd {
 		if user, ok := item.(User); ok {
-			return func() tea.Msg { return PushPageMsg{newSigninModel(user.Title())} }
+			return func() tea.Msg { return PushPageMsg{newSigninModel(user.id, userRepo)} }
 		}
 
 		return nil

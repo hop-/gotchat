@@ -3,6 +3,7 @@ package tui
 import (
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/hop-/gotchat/internal/core"
 )
 
 type SigninModel struct {
@@ -19,10 +20,22 @@ type SigninModel struct {
 
 	// Stack component
 	stack *Stack
+
+	// Repos
+	userRepo core.Repository[core.User]
+
+	// User ID
+	user *core.User
 }
 
-func newSigninModel(username string) *SigninModel {
-	usernameLabel := newLabel(username)
+func newSigninModel(userId string, userRepo core.Repository[core.User]) *SigninModel {
+	user, err := userRepo.GetOneBy("unique_id", userId)
+	if err != nil {
+		// TODO: Handle error
+		panic(err)
+	}
+
+	usernameLabel := newLabel(user.Name)
 
 	passwordInput := newTextInput("Password")
 	passwordInput.Placeholder = "Enter your password"
@@ -34,7 +47,13 @@ func newSigninModel(username string) *SigninModel {
 
 	loginButton := newButton("Login")
 	loginButton.SetActive(false)
-	loginButton.OnAction(func() tea.Msg { return SetNewPageMsg{newChatViewModel()} })
+	loginButton.OnAction(func() tea.Msg {
+		if core.CheckPasswordHash(passwordInput.Value(), user.Password) {
+			return SetNewPageMsg{newChatViewModel()}
+		}
+
+		return ErrorMsg{Message: "Invalid password"}
+	})
 
 	backButton := newButton("Back")
 	backButton.SetActive(true)
@@ -49,6 +68,8 @@ func newSigninModel(username string) *SigninModel {
 		loginButton,
 		backButton,
 		newStack(Vertical, 1, usernameLabel, passwordInput, newStack(Horizontal, 3, loginButton, backButton)),
+		userRepo,
+		user,
 	}
 }
 

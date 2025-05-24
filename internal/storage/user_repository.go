@@ -13,14 +13,32 @@ func newUserRepository(storage StorageDb) *UserRepository {
 }
 
 func (r *UserRepository) GetOne(id int) (*core.User, error) {
-	row := r.Db().QueryRow("SELECT id, unique_id, name, last_login FROM users WHERE id = ?", id)
+	row := r.Db().QueryRow("SELECT id, unique_id, name, password, last_login FROM users WHERE id = ?", id)
 	if row == nil {
-		return nil, nil
+		return nil, ErrNotFound
 	}
 
 	var u core.User
 
-	err := row.Scan(&u.Id, &u.UniqueId, &u.Name, &u.LastLogin)
+	err := row.Scan(&u.Id, &u.UniqueId, &u.Name, &u.Password, &u.LastLogin)
+	if err != nil {
+		return nil, err
+	}
+
+	return &u, nil
+}
+
+func (r *UserRepository) GetOneBy(field string, value any) (*core.User, error) {
+	if !isFieldExist[core.User](field) {
+		return nil, ErrFieldNotExist
+	}
+	row := r.Db().QueryRow("SELECT id, unique_id, name, password, last_login FROM users WHERE "+field+" = ?", value)
+	if row == nil {
+		return nil, ErrNotFound
+	}
+
+	var u core.User
+	err := row.Scan(&u.Id, &u.UniqueId, &u.Name, &u.Password, &u.LastLogin)
 	if err != nil {
 		return nil, err
 	}
@@ -29,7 +47,7 @@ func (r *UserRepository) GetOne(id int) (*core.User, error) {
 }
 
 func (r *UserRepository) GetAll() ([]*core.User, error) {
-	rows, err := r.Db().Query("SELECT id, unique_id, name, last_login FROM users")
+	rows, err := r.Db().Query("SELECT id, unique_id, name, password, last_login FROM users")
 	if err != nil {
 		return nil, err
 	}
@@ -38,7 +56,7 @@ func (r *UserRepository) GetAll() ([]*core.User, error) {
 	var users []*core.User
 	for rows.Next() {
 		var u core.User
-		err := rows.Scan(&u.Id, &u.UniqueId, &u.Name, &u.LastLogin)
+		err := rows.Scan(&u.Id, &u.UniqueId, &u.Name, &u.Password, &u.LastLogin)
 		if err != nil {
 			return nil, err
 		}
@@ -53,7 +71,7 @@ func (r *UserRepository) GetAllBy(field string, value any) ([]*core.User, error)
 		return nil, ErrFieldNotExist
 	}
 
-	rows, err := r.Db().Query("SELECT id, unique_id, name, last_login FROM users where ? = ?", field, value)
+	rows, err := r.Db().Query("SELECT id, unique_id, name, password, last_login FROM users where "+field+" = ?", value)
 	if err != nil {
 		return nil, err
 	}
@@ -62,7 +80,7 @@ func (r *UserRepository) GetAllBy(field string, value any) ([]*core.User, error)
 	var users []*core.User
 	for rows.Next() {
 		var u core.User
-		err := rows.Scan(&u.Id, &u.UniqueId, &u.Name, &u.LastLogin)
+		err := rows.Scan(&u.Id, &u.UniqueId, &u.Name, &u.Password, &u.LastLogin)
 		if err != nil {
 			return nil, err
 		}
@@ -74,9 +92,10 @@ func (r *UserRepository) GetAllBy(field string, value any) ([]*core.User, error)
 
 func (r *UserRepository) Create(user *core.User) error {
 	_, err := r.Db().Exec(
-		"INSERT INTO users (unique_id, name, last_login) VALUES (?, ?, ?)",
+		"INSERT INTO users (unique_id, name, password, last_login) VALUES (?, ?, ?, ?)",
 		user.UniqueId,
 		user.Name,
+		user.Password,
 		user.LastLogin,
 	)
 
@@ -84,7 +103,13 @@ func (r *UserRepository) Create(user *core.User) error {
 }
 
 func (r *UserRepository) Update(user *core.User) error {
-	_, err := r.Db().Exec("UPDATE users SET name = ?, last_login = ? WHERE id = ?", user.Name, user.LastLogin, user.Id)
+	_, err := r.Db().Exec(
+		"UPDATE users SET name = ?, password = ?, last_login = ? WHERE id = ?",
+		user.Name,
+		user.Password,
+		user.LastLogin,
+		user.Id,
+	)
 
 	return err
 }

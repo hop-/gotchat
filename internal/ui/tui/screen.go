@@ -16,6 +16,8 @@ type Screen struct {
 
 func (m *Screen) Update(msg tea.Msg) tea.Cmd {
 	switch msg := msg.(type) {
+	case ErrorMsg:
+		m.AddError(msg.Message)
 	case tea.WindowSizeMsg:
 		screenWidth = msg.Width - 4
 		screenHeight = msg.Height - 2

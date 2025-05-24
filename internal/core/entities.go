@@ -10,7 +10,7 @@ type Entity interface {
 }
 
 func GetFieldNamesOfEntity[T Entity]() []string {
-	t := reflect.TypeOf((*T)(nil))
+	t := reflect.TypeOf((*T)(nil)).Elem()
 	fieldNames := make([]string, 0, t.NumField())
 
 	for i := 0; i < t.NumField(); i++ {
@@ -32,16 +32,18 @@ func (e BaseEntity) GetId() int {
 
 type User struct {
 	BaseEntity
-	Name      string    `name:"name"`
 	UniqueId  string    `name:"unique_id"`
+	Name      string    `name:"name"`
+	Password  string    `name:"password"`
 	LastLogin time.Time `name:"last_login"`
 }
 
-func NewUser(name string) *User {
+func NewUser(name string, password string) *User {
 	return &User{
 		BaseEntity: BaseEntity{},
 		UniqueId:   generateUuid(),
 		Name:       name,
+		Password:   password,
 		LastLogin:  time.Now(),
 	}
 }

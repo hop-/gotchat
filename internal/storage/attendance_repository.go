@@ -13,11 +13,30 @@ func newAttendanceRepository(storage StorageDb) *AttendanceRepository {
 func (a *AttendanceRepository) GetOne(id int) (*core.Attendance, error) {
 	row := a.Db().QueryRow("SELECT id, user_id, channel_id, joined_at FROM attendances WHERE id = ?", id)
 	if row == nil {
-		return nil, nil
+		return nil, ErrNotFound
 	}
 
 	var att core.Attendance
 
+	err := row.Scan(&att.Id, &att.UserId, &att.ChannelId, &att.JoinedAt)
+	if err != nil {
+		return nil, err
+	}
+
+	return &att, nil
+}
+
+func (a *AttendanceRepository) GetOneBy(field string, value any) (*core.Attendance, error) {
+	if !isFieldExist[core.Attendance](field) {
+		return nil, ErrFieldNotExist
+	}
+
+	row := a.Db().QueryRow("SELECT id, user_id, channel_id, joined_at FROM attendances WHERE "+field+" = ?", value)
+	if row == nil {
+		return nil, ErrNotFound
+	}
+
+	var att core.Attendance
 	err := row.Scan(&att.Id, &att.UserId, &att.ChannelId, &att.JoinedAt)
 	if err != nil {
 		return nil, err
@@ -51,7 +70,7 @@ func (a *AttendanceRepository) GetAllBy(field string, value any) ([]*core.Attend
 		return nil, ErrFieldNotExist
 	}
 
-	rows, err := a.Db().Query("SELECT id, user_id, channel_id, joined_at FROM attendances WHERE ? = ?", value)
+	rows, err := a.Db().Query("SELECT id, user_id, channel_id, joined_at FROM attendances WHERE "+field+" = ?", value)
 	if err != nil {
 		return nil, err
 	}

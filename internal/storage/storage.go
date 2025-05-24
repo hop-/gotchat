@@ -106,8 +106,9 @@ func createUserTable(db *sql.DB) error {
 	CREATE TABLE IF NOT EXISTS users (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		unique_id TEXT UNIQUE,
-		name TEXT,
-		last_login DATETIME
+		name TEXT NOT NULL,
+		password TEXT NOT NULL,
+		last_login DATETIME DEFAULT CURRENT_TIMESTAMP
 	)`)
 
 	return err
