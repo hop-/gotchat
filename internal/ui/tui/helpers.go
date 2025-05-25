@@ -15,26 +15,22 @@ func FormatLastLogin(loginAt time.Time) string {
 	case diff < time.Minute:
 		return "just now"
 	case diff < time.Hour:
-		duration = int(diff.Minutes())
-		unit = "minute"
-		if duration > 1 {
-			unit += "s"
-		}
+		duration, unit = formatDuration(int(diff.Minutes()), "minute")
 	case diff < 24*time.Hour:
-		duration := int(diff.Hours())
-		unit = "hour"
-		if duration > 1 {
-			unit += "s"
-		}
+		duration, unit = formatDuration(int(diff.Hours()), "hour")
 	case diff < 10*24*time.Hour:
-		days := int(diff.Hours() / 24)
-		unit = "day"
-		if days > 1 {
-			unit += "s"
-		}
+		duration, unit = formatDuration(int(diff.Hours()/24), "day")
 	default:
-		return loginAt.Format("2011-01-02 13:04:25")
+		return loginAt.Format("May 2, 2023")
 	}
 
 	return fmt.Sprintf("%d %s ago", duration, unit)
+}
+
+func formatDuration(duration int, unit string) (int, string) {
+	if duration > 1 {
+		unit += "s"
+	}
+
+	return duration, unit
 }
