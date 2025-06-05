@@ -25,7 +25,7 @@ type SignupModel struct {
 	userRepo core.Repository[core.User]
 }
 
-func newSignupModel(userRepo core.Repository[core.User]) *SignupModel {
+func newSignupModel(userRepo core.Repository[core.User], channelRepo core.Repository[core.Channel]) *SignupModel {
 	usernameInput := newTextInput("Username")
 	usernameInput.Placeholder = "Enter your nickname"
 	usernameInput.CharLimit = 128
@@ -55,7 +55,7 @@ func newSignupModel(userRepo core.Repository[core.User]) *SignupModel {
 			return nil
 		}
 
-		return SetNewPageMsg{newChatViewModel()}
+		return SetNewPageMsg{newChatViewModel(channelRepo)}
 	})
 
 	backButton := newButton("Back")

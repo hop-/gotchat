@@ -13,6 +13,7 @@ func FormatLastLogin(loginAt time.Time) string {
 
 	switch {
 	case diff < time.Minute:
+		// If the last login was less than a minute ago
 		return "just now"
 	case diff < time.Hour:
 		duration, unit = formatDuration(int(diff.Minutes()), "minute")
@@ -21,9 +22,11 @@ func FormatLastLogin(loginAt time.Time) string {
 	case diff < 10*24*time.Hour:
 		duration, unit = formatDuration(int(diff.Hours()/24), "day")
 	default:
-		return loginAt.Format("May 2, 2023")
+		// Date format for long durations
+		return loginAt.Format("at May 2, 2006")
 	}
 
+	// Format the output string for general durations
 	return fmt.Sprintf("%d %s ago", duration, unit)
 }
 

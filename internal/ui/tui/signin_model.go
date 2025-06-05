@@ -1,6 +1,8 @@
 package tui
 
 import (
+	"time"
+
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/hop-/gotchat/internal/core"
@@ -28,7 +30,7 @@ type SigninModel struct {
 	user *core.User
 }
 
-func newSigninModel(userId string, userRepo core.Repository[core.User]) *SigninModel {
+func newSigninModel(userId string, userRepo core.Repository[core.User], channelRepo core.Repository[core.Channel]) *SigninModel {
 	user, err := userRepo.GetOneBy("unique_id", userId)
 	if err != nil {
 		// TODO: Handle error
@@ -49,7 +51,10 @@ func newSigninModel(userId string, userRepo core.Repository[core.User]) *SigninM
 	loginButton.SetActive(false)
 	loginButton.OnAction(func() tea.Msg {
 		if core.CheckPasswordHash(passwordInput.Value(), user.Password) {
-			return SetNewPageMsg{newChatViewModel()}
+			user.LastLogin = time.Now()
+			userRepo.Update(user)
+
+			return SetNewPageMsg{newChatViewModel(channelRepo)}
 		}
 
 		return ErrorMsg{Message: "Invalid password"}

@@ -6,6 +6,7 @@ import (
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/hop-/gotchat/internal/core"
 )
 
 type ChatViewModel struct {
@@ -22,9 +23,12 @@ type ChatViewModel struct {
 
 	// Stack
 	stack *Stack
+
+	// Repos
+	channelRepo core.Repository[core.Channel]
 }
 
-func newChatViewModel() *ChatViewModel {
+func newChatViewModel(channelRepo core.Repository[core.Channel]) *ChatViewModel {
 	// Initialize chat list
 	chats := newItemList([]list.Item{})
 	chats.Title = "Chats"
@@ -58,6 +62,7 @@ func newChatViewModel() *ChatViewModel {
 		chatHistory,
 		chatInput,
 		newStack(Horizontal, 3, chats, newStackWithPosition(lipgloss.Left, Vertical, 2, chatHistory, chatInput)),
+		channelRepo,
 	}
 }
 
