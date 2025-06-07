@@ -13,9 +13,14 @@ type Tui struct {
 	emitter core.EventEmitter
 }
 
-func New(em core.EventEmitter, userRepo core.Repository[core.User], channelRepo core.Repository[core.Channel]) *Tui {
-	rootModel := newRootModel(newUsersListModel(userRepo, channelRepo), em)
-	p := tea.NewProgram(rootModel)
+func New(
+	em core.EventEmitter,
+	userRepo core.Repository[core.User],
+	channelRepo core.Repository[core.Channel],
+	attendanceRepo core.Repository[core.Attendance],
+) *Tui {
+	rootModel := newRootModel(newUsersListModel(userRepo, channelRepo, attendanceRepo), em)
+	p := tea.NewProgram(rootModel, tea.WithAltScreen())
 
 	return &Tui{p, em}
 }

@@ -10,8 +10,8 @@ import (
 )
 
 type ChatViewModel struct {
-	// Screen component
-	Screen
+	// Frame component
+	Frame
 
 	// Focusable component
 	*FocusContainer
@@ -25,10 +25,18 @@ type ChatViewModel struct {
 	stack *Stack
 
 	// Repos
-	channelRepo core.Repository[core.Channel]
+	channelRepo    core.Repository[core.Channel]
+	attendanceRepo core.Repository[core.Attendance]
+
+	// User entity
+	user *core.User
 }
 
-func newChatViewModel(channelRepo core.Repository[core.Channel]) *ChatViewModel {
+func newChatViewModel(
+	user *core.User,
+	channelRepo core.Repository[core.Channel],
+	attendanceRepo core.Repository[core.Attendance],
+) *ChatViewModel {
 	// Initialize chat list
 	chats := newItemList([]list.Item{})
 	chats.Title = "Chats"
@@ -55,7 +63,7 @@ func newChatViewModel(channelRepo core.Repository[core.Channel]) *ChatViewModel 
 	chatInput.SetWidth(20)
 
 	return &ChatViewModel{
-		Screen{},
+		Frame{},
 		&FocusContainer{[]FocusableModel{chatInput, chats, chatHistory}, 0},
 
 		chats,
@@ -63,6 +71,8 @@ func newChatViewModel(channelRepo core.Repository[core.Channel]) *ChatViewModel 
 		chatInput,
 		newStack(Horizontal, 3, chats, newStackWithPosition(lipgloss.Left, Vertical, 2, chatHistory, chatInput)),
 		channelRepo,
+		attendanceRepo,
+		user,
 	}
 }
 
@@ -78,20 +88,20 @@ func (m *ChatViewModel) Init() tea.Cmd {
 }
 
 func (m *ChatViewModel) syncComponentSizes() {
-	m.chats.SetSize(m.Screen.Width()/5, m.Screen.Height())
+	m.chats.SetSize(m.Frame.Width()/5, m.Frame.Height())
 
 	// TODO: validate the stack component [1]
 	gapHeight := lipgloss.Height(m.stack.Components()[1].(*Stack).Gap())
 	gapWidth := lipgloss.Width(m.stack.Gap())
-	reminingWidth := m.Screen.Width() - m.chats.Width() - gapWidth
-	m.chatHistory.SetSize(reminingWidth, m.Screen.Height()-gapHeight-m.chatInput.Height())
+	reminingWidth := m.Frame.Width() - m.chats.Width() - gapWidth
+	m.chatHistory.SetSize(reminingWidth, m.Frame.Height()-gapHeight-m.chatInput.Height())
 
 	m.chatInput.SetWidth(reminingWidth)
 }
 
 func (m *ChatViewModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	// handle screen updates
-	screenCmd := m.Screen.Update(msg)
+	// handle updates on frame
+	frameCmd := m.Frame.Update(msg)
 
 	switch msg.(type) {
 	case tea.WindowSizeMsg:
@@ -101,9 +111,9 @@ func (m *ChatViewModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	fc, cmd := m.FocusContainer.Update(msg)
 	m.FocusContainer = fc
 
-	return m, tea.Batch(screenCmd, cmd)
+	return m, tea.Batch(frameCmd, cmd)
 }
 
 func (m *ChatViewModel) View() string {
-	return m.Screen.View(m.stack.View())
+	return m.Frame.View(m.stack.View())
 }

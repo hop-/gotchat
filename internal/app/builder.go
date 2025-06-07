@@ -26,7 +26,7 @@ func (b *Builder) WithEventManager(bufferSize int) *Builder {
 	return b
 }
 
-func (b *Builder) WithUI(ui ui.UI) *Builder {
+func (b *Builder) WithUi(ui ui.UI) *Builder {
 	b.ui = ui
 
 	return b

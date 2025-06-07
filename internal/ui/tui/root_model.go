@@ -59,9 +59,13 @@ func (m *RootModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if len(m.pageStack) > 1 {
 			m.popPage()
 		} else {
-			return m, internalQuit
+			return m, InternalQuit
 		}
 	case InternalQuitMsg:
+		m.pageStack = []tea.Model{newShutdownModel()}
+
+		return m, m.currentPage().Init()
+	case ShutdownMsg:
 		m.emitter.Emit(core.QuitEvent{})
 	}
 

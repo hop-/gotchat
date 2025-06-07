@@ -7,8 +7,8 @@ import (
 )
 
 type SignupModel struct {
-	// Screen component
-	Screen
+	// Frame component
+	Frame
 	// Focusable container
 	*FocusContainer
 
@@ -25,7 +25,11 @@ type SignupModel struct {
 	userRepo core.Repository[core.User]
 }
 
-func newSignupModel(userRepo core.Repository[core.User], channelRepo core.Repository[core.Channel]) *SignupModel {
+func newSignupModel(
+	userRepo core.Repository[core.User],
+	channelRepo core.Repository[core.Channel],
+	attendanceRepo core.Repository[core.Attendance],
+) *SignupModel {
 	usernameInput := newTextInput("Username")
 	usernameInput.Placeholder = "Enter your nickname"
 	usernameInput.CharLimit = 128
@@ -49,13 +53,14 @@ func newSignupModel(userRepo core.Repository[core.User], channelRepo core.Reposi
 			return nil
 		}
 
-		err = userRepo.Create(core.NewUser(usernameInput.Value(), passwordHash))
+		user := core.NewUser(usernameInput.Value(), passwordHash)
+		err = userRepo.Create(user)
 		if err != nil {
 			// TODO: handle error properly
 			return nil
 		}
 
-		return SetNewPageMsg{newChatViewModel(channelRepo)}
+		return SetNewPageMsg{newChatViewModel(user, channelRepo, attendanceRepo)}
 	})
 
 	backButton := newButton("Back")
@@ -63,7 +68,7 @@ func newSignupModel(userRepo core.Repository[core.User], channelRepo core.Reposi
 	backButton.OnAction(func() tea.Msg { return PopPageMsg{} })
 
 	return &SignupModel{
-		Screen{},
+		Frame{},
 		&FocusContainer{[]FocusableModel{usernameInput, passwordInput, loginButton, backButton}, 0},
 		usernameInput,
 		passwordInput,
@@ -81,15 +86,15 @@ func (m *SignupModel) Init() tea.Cmd {
 }
 
 func (m *SignupModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	// Handle screen updates
-	screenCmd := m.Screen.Update(msg)
+	// Handle supdates on frame
+	frameCmd := m.Frame.Update(msg)
 
 	m.updateActiveStates()
 
 	fc, cmd := m.FocusContainer.Update(msg)
 	m.FocusContainer = fc
 
-	return m, tea.Batch(screenCmd, cmd)
+	return m, tea.Batch(frameCmd, cmd)
 }
 
 func (m *SignupModel) updateActiveStates() {
@@ -107,5 +112,5 @@ func (m *SignupModel) updateActiveStates() {
 }
 
 func (m *SignupModel) View() string {
-	return m.Screen.View(m.stack.View())
+	return m.Frame.View(m.stack.View())
 }

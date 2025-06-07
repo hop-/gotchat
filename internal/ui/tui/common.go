@@ -63,10 +63,20 @@ type PopPageMsg struct{}
 
 type InternalQuitMsg struct{}
 
+type ShutdownMsg struct{}
+
 type ErrorMsg struct {
 	Message string
 }
 
-func internalQuit() tea.Msg {
+func InternalQuit() tea.Msg {
 	return InternalQuitMsg{}
+}
+
+func Error(msg string) tea.Cmd {
+	return func() tea.Msg { return ErrorMsg{msg} }
+}
+
+func Shutdown() tea.Msg {
+	return ShutdownMsg{}
 }

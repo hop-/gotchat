@@ -38,8 +38,13 @@ func buildApplication() *app.App {
 	builder.WithService(server)
 
 	// Create a new UI and set it in the builder
-	ui := tui.New(em, storage.GetUserRepository(), storage.GetChannelRepository())
-	builder.WithUI(ui)
+	ui := tui.New(
+		em,
+		storage.GetUserRepository(),
+		storage.GetChannelRepository(),
+		storage.GetAttendanceRepository(),
+	)
+	builder.WithUi(ui)
 
 	return builder.Build()
 }

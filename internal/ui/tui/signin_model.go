@@ -9,8 +9,8 @@ import (
 )
 
 type SigninModel struct {
-	// Screen component
-	Screen
+	// Frame component
+	Frame
 	// Focusable container
 	*FocusContainer
 
@@ -25,18 +25,14 @@ type SigninModel struct {
 
 	// Repos
 	userRepo core.Repository[core.User]
-
-	// User ID
-	user *core.User
 }
 
-func newSigninModel(userId string, userRepo core.Repository[core.User], channelRepo core.Repository[core.Channel]) *SigninModel {
-	user, err := userRepo.GetOneBy("unique_id", userId)
-	if err != nil {
-		// TODO: Handle error
-		panic(err)
-	}
-
+func newSigninModel(
+	user *core.User,
+	userRepo core.Repository[core.User],
+	channelRepo core.Repository[core.Channel],
+	attendanceRepo core.Repository[core.Attendance],
+) *SigninModel {
 	usernameLabel := newLabel(user.Name)
 
 	passwordInput := newTextInput("Password")
@@ -54,7 +50,7 @@ func newSigninModel(userId string, userRepo core.Repository[core.User], channelR
 			user.LastLogin = time.Now()
 			userRepo.Update(user)
 
-			return SetNewPageMsg{newChatViewModel(channelRepo)}
+			return SetNewPageMsg{newChatViewModel(user, channelRepo, attendanceRepo)}
 		}
 
 		return ErrorMsg{Message: "Invalid password"}
@@ -65,7 +61,7 @@ func newSigninModel(userId string, userRepo core.Repository[core.User], channelR
 	backButton.OnAction(func() tea.Msg { return PopPageMsg{} })
 
 	return &SigninModel{
-		Screen{},
+		Frame{},
 		&FocusContainer{[]FocusableModel{passwordInput, loginButton, backButton}, 0},
 
 		usernameLabel,
@@ -74,7 +70,6 @@ func newSigninModel(userId string, userRepo core.Repository[core.User], channelR
 		backButton,
 		newStack(Vertical, 1, usernameLabel, passwordInput, newStack(Horizontal, 3, loginButton, backButton)),
 		userRepo,
-		user,
 	}
 }
 
@@ -85,15 +80,19 @@ func (m *SigninModel) Init() tea.Cmd {
 }
 
 func (m *SigninModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	// Handle screen updates
-	screenCmd := m.Screen.Update(msg)
+	// Handle updates on frame
+	frameCmd := m.Frame.Update(msg)
 
 	m.updateActiveStates()
 
 	fc, cmd := m.FocusContainer.Update(msg)
 	m.FocusContainer = fc
 
-	return m, tea.Batch(screenCmd, cmd)
+	return m, tea.Batch(frameCmd, cmd)
+}
+
+func (m *SigninModel) View() string {
+	return m.Frame.View(m.stack.View())
 }
 
 func (m *SigninModel) updateActiveStates() {
@@ -102,8 +101,4 @@ func (m *SigninModel) updateActiveStates() {
 	} else {
 		m.loginButton.SetActive(false)
 	}
-}
-
-func (m *SigninModel) View() string {
-	return m.Screen.View(m.stack.View())
 }

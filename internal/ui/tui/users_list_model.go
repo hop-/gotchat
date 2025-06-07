@@ -15,8 +15,8 @@ func (i User) Description() string { return i.lastLogin }
 func (i User) FilterValue() string { return i.name }
 
 type UsersListModel struct {
-	// Screen component
-	Screen
+	// Frame component
+	Frame
 	// Focusable component
 	*FocusContainer
 
@@ -30,12 +30,21 @@ type UsersListModel struct {
 	userRepo core.Repository[core.User]
 }
 
-func newUsersListModel(userRepo core.Repository[core.User], channelRepo core.Repository[core.Channel]) *UsersListModel {
+func newUsersListModel(
+	userRepo core.Repository[core.User],
+	channelRepo core.Repository[core.Channel],
+	attendanceRepo core.Repository[core.Attendance],
+) *UsersListModel {
 	l := newItemList([]list.Item{})
 	l.Title = "Users"
 	l.OnSelect(func(item list.Item) tea.Cmd {
-		if user, ok := item.(User); ok {
-			return func() tea.Msg { return PushPageMsg{newSigninModel(user.id, userRepo, channelRepo)} }
+		if userItem, ok := item.(User); ok {
+			user, err := userRepo.GetOneBy("unique_id", userItem.id)
+			if err != nil {
+				return Error(err.Error())
+			}
+
+			return func() tea.Msg { return PushPageMsg{newSigninModel(user, userRepo, channelRepo, attendanceRepo)} }
 		}
 
 		return nil
@@ -43,14 +52,14 @@ func newUsersListModel(userRepo core.Repository[core.User], channelRepo core.Rep
 
 	newLoginButton := newButton("New Login")
 	newLoginButton.SetActive(true)
-	newLoginButton.OnAction(func() tea.Msg { return PushPageMsg{newSignupModel(userRepo, channelRepo)} })
+	newLoginButton.OnAction(func() tea.Msg { return PushPageMsg{newSignupModel(userRepo, channelRepo, attendanceRepo)} })
 
 	exitButton := newButton("Exit")
 	exitButton.SetActive(true)
-	exitButton.OnAction(internalQuit)
+	exitButton.OnAction(InternalQuit)
 
 	return &UsersListModel{
-		Screen{},
+		Frame{},
 		&FocusContainer{[]FocusableModel{l, newLoginButton, exitButton}, 0},
 		l,
 		newStack(Vertical, 2, l, newStack(Horizontal, 3, newLoginButton, exitButton)),
@@ -69,28 +78,28 @@ func (m *UsersListModel) Init() tea.Cmd {
 }
 
 func (m *UsersListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	// Handle screen updates
-	screenCmd := m.Screen.Update(msg)
+	// Handle updates on frame
+	frameCmd := m.Frame.Update(msg)
 
 	switch msg.(type) {
 	case tea.WindowSizeMsg:
-		m.list.SetSize(m.Screen.Width()/2, m.Screen.Height()/2)
+		m.list.SetSize(m.Frame.Width()/2, m.Frame.Height()/2)
 	}
 
 	fc, cmd := m.FocusContainer.Update(msg)
 	m.FocusContainer = fc
 
-	return m, tea.Batch(screenCmd, cmd)
+	return m, tea.Batch(frameCmd, cmd)
 }
 
 func (m *UsersListModel) View() string {
-	return m.Screen.View(m.stack.View())
+	return m.Frame.View(m.stack.View())
 }
 
 func (m *UsersListModel) getUsers() []list.Item {
 	users, err := m.userRepo.GetAll()
 	if err != nil {
-		m.Screen.AddError(err.Error())
+		m.Frame.addError(err.Error())
 		return nil
 	}
 
