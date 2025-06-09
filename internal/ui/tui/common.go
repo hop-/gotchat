@@ -61,12 +61,16 @@ type PushPageMsg struct {
 
 type PopPageMsg struct{}
 
-type InternalQuitMsg struct{}
-
 type ShutdownMsg struct{}
+
+type InternalQuitMsg struct{}
 
 type ErrorMsg struct {
 	Message string
+}
+
+func Shutdown() tea.Msg {
+	return ShutdownMsg{}
 }
 
 func InternalQuit() tea.Msg {
@@ -75,8 +79,4 @@ func InternalQuit() tea.Msg {
 
 func Error(msg string) tea.Cmd {
 	return func() tea.Msg { return ErrorMsg{msg} }
-}
-
-func Shutdown() tea.Msg {
-	return ShutdownMsg{}
 }

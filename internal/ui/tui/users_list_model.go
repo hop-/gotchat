@@ -56,7 +56,7 @@ func newUsersListModel(
 
 	exitButton := newButton("Exit")
 	exitButton.SetActive(true)
-	exitButton.OnAction(InternalQuit)
+	exitButton.OnAction(Shutdown)
 
 	return &UsersListModel{
 		Frame{},

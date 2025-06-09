@@ -48,6 +48,7 @@ func (m *RootModel) Init() tea.Cmd {
 func (m *RootModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case SetNewPageMsg:
+		// Reset the page stack with the new page
 		m.pageStack = []tea.Model{msg.Page}
 
 		return m, m.currentPage().Init()
@@ -59,13 +60,14 @@ func (m *RootModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if len(m.pageStack) > 1 {
 			m.popPage()
 		} else {
-			return m, InternalQuit
+			return m, Shutdown
 		}
-	case InternalQuitMsg:
+	case ShutdownMsg:
+		// Setup shutdown screen
 		m.pageStack = []tea.Model{newShutdownModel()}
 
 		return m, m.currentPage().Init()
-	case ShutdownMsg:
+	case InternalQuitMsg:
 		m.emitter.Emit(core.QuitEvent{})
 	}
 

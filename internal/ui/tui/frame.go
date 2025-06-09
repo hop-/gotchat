@@ -22,8 +22,9 @@ func (m *Frame) Update(msg tea.Msg) tea.Cmd {
 		frameWidth = msg.Width - 4
 		frameHeight = msg.Height - 2
 	case tea.KeyMsg:
-		if msg.String() == "ctrl+c" || msg.String() == "ctrl+d" || msg.String() == "ctrl+q" {
-			return InternalQuit
+		switch msg.String() {
+		case "ctrl+c", "ctrl+d", "ctrl+q":
+			return Shutdown
 		}
 	}
 

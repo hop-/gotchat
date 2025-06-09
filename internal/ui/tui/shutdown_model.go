@@ -21,7 +21,7 @@ func (m *ShutdownModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	// Handle updates on frame
 	frameCmd := m.Frame.Update(msg)
 
-	return m, tea.Batch(frameCmd, Shutdown)
+	return m, tea.Batch(frameCmd, InternalQuit)
 }
 
 func (m *ShutdownModel) View() string {
