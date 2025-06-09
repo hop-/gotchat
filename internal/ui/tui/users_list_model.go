@@ -44,7 +44,7 @@ func newUsersListModel(
 				return Error(err.Error())
 			}
 
-			return func() tea.Msg { return PushPageMsg{newSigninModel(user, userRepo, channelRepo, attendanceRepo)} }
+			return PushPage(newSigninModel(user, userRepo, channelRepo, attendanceRepo))
 		}
 
 		return nil
@@ -52,7 +52,7 @@ func newUsersListModel(
 
 	newLoginButton := newButton("New Login")
 	newLoginButton.SetActive(true)
-	newLoginButton.OnAction(func() tea.Msg { return PushPageMsg{newSignupModel(userRepo, channelRepo, attendanceRepo)} })
+	newLoginButton.OnAction(PushPage(newSignupModel(userRepo, channelRepo, attendanceRepo)))
 
 	exitButton := newButton("Exit")
 	exitButton.SetActive(true)

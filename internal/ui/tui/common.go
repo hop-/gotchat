@@ -51,6 +51,8 @@ type FocusableActivatableModel interface {
 	Activatable
 }
 
+// Custm messages
+
 type SetNewPageMsg struct {
 	Page tea.Model
 }
@@ -69,6 +71,24 @@ type ErrorMsg struct {
 	Message string
 }
 
+// Custom commands and command factories
+
+func SetNewPage(page tea.Model) tea.Cmd {
+	return func() tea.Msg {
+		return SetNewPageMsg{page}
+	}
+}
+
+func PushPage(page tea.Model) tea.Cmd {
+	return func() tea.Msg {
+		return PushPageMsg{page}
+	}
+}
+
+func PopPage() tea.Msg {
+	return PopPageMsg{}
+}
+
 func Shutdown() tea.Msg {
 	return ShutdownMsg{}
 }
@@ -78,5 +98,7 @@ func InternalQuit() tea.Msg {
 }
 
 func Error(msg string) tea.Cmd {
-	return func() tea.Msg { return ErrorMsg{msg} }
+	return func() tea.Msg {
+		return ErrorMsg{msg}
+	}
 }

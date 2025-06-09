@@ -65,7 +65,7 @@ func newSignupModel(
 
 	backButton := newButton("Back")
 	backButton.SetActive(true)
-	backButton.OnAction(func() tea.Msg { return PopPageMsg{} })
+	backButton.OnAction(PopPage)
 
 	return &SignupModel{
 		Frame{},
