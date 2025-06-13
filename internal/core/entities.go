@@ -50,13 +50,13 @@ func NewUser(name string, password string) *User {
 
 type Message struct {
 	BaseEntity
-	UserId    string    `name:"user_id"`
-	ChannelId string    `name:"channel_id"`
+	UserId    int       `name:"user_id"`
+	ChannelId int       `name:"channel_id"`
 	Text      string    `name:"text"`
 	CreatedAt time.Time `name:"created_at"`
 }
 
-func NewMessage(userId, channelId, text string) *Message {
+func NewMessage(userId int, channelId int, text string) *Message {
 	return &Message{
 		BaseEntity: BaseEntity{},
 		UserId:     userId,
@@ -75,13 +75,14 @@ type Channel struct {
 func NewChannel(name string) *Channel {
 	return &Channel{
 		BaseEntity: BaseEntity{},
+		UniqueId:   generateUuid(),
 		Name:       name,
 	}
 }
 
 type Attendance struct {
 	BaseEntity
-	UserId    string    `name:"user_id"`
-	ChannelId string    `name:"channel_id"`
+	UserId    int       `name:"user_id"`
+	ChannelId int       `name:"channel_id"`
 	JoinedAt  time.Time `name:"joined_at"`
 }

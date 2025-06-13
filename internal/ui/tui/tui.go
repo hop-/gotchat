@@ -18,8 +18,9 @@ func New(
 	userRepo core.Repository[core.User],
 	channelRepo core.Repository[core.Channel],
 	attendanceRepo core.Repository[core.Attendance],
+	messageRepo core.Repository[core.Message],
 ) *Tui {
-	rootModel := newRootModel(newUsersListModel(userRepo, channelRepo, attendanceRepo), em)
+	rootModel := newRootModel(newUsersListModel(userRepo, channelRepo, attendanceRepo, messageRepo), em)
 	p := tea.NewProgram(rootModel, tea.WithAltScreen())
 
 	return &Tui{p, em}

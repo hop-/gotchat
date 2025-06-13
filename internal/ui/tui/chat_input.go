@@ -6,6 +6,16 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
+type ChatInputMessageSentMsg struct {
+	Content string
+}
+
+func ChatInputMessageSent(content string) tea.Cmd {
+	return func() tea.Msg {
+		return ChatInputMessageSentMsg{content}
+	}
+}
+
 type ChatInput struct {
 	textarea.Model
 	isActive bool
@@ -31,10 +41,25 @@ func (ci *ChatInput) Init() tea.Cmd {
 }
 
 func (ci *ChatInput) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	cmds := []tea.Cmd{}
 	var cmd tea.Cmd
 	ci.Model, cmd = ci.Model.Update(msg)
+	cmds = append(cmds, cmd)
 
-	return ci, cmd
+	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		switch msg.String() {
+		case "enter":
+			if ci.Model.Value() != "" {
+				// Send the message
+				cmds = append(cmds, ChatInputMessageSent(ci.Model.Value()))
+				// Reset the input field
+				ci.Model.Reset()
+			}
+		}
+	}
+
+	return ci, tea.Batch(cmds...)
 }
 
 func (ci *ChatInput) View() string {

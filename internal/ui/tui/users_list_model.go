@@ -34,6 +34,7 @@ func newUsersListModel(
 	userRepo core.Repository[core.User],
 	channelRepo core.Repository[core.Channel],
 	attendanceRepo core.Repository[core.Attendance],
+	messageRepo core.Repository[core.Message],
 ) *UsersListModel {
 	l := newItemList([]list.Item{})
 	l.Title = "Users"
@@ -44,7 +45,7 @@ func newUsersListModel(
 				return Error(err.Error())
 			}
 
-			return PushPage(newSigninModel(user, userRepo, channelRepo, attendanceRepo))
+			return PushPage(newSigninModel(user, userRepo, channelRepo, attendanceRepo, messageRepo))
 		}
 
 		return nil
@@ -52,7 +53,7 @@ func newUsersListModel(
 
 	newLoginButton := newButton("New Login")
 	newLoginButton.SetActive(true)
-	newLoginButton.OnAction(PushPage(newSignupModel(userRepo, channelRepo, attendanceRepo)))
+	newLoginButton.OnAction(PushPage(newSignupModel(userRepo, channelRepo, attendanceRepo, messageRepo)))
 
 	exitButton := newButton("Exit")
 	exitButton.SetActive(true)

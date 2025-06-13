@@ -76,6 +76,10 @@ func (s *Storage) GetAttendanceRepository() core.Repository[core.Attendance] {
 	return newAttendanceRepository(s)
 }
 
+func (s *Storage) GetMessageRepository() core.Repository[core.Message] {
+	return newMessageRepository(s)
+}
+
 func (s *Storage) Name() string {
 	return "Storage"
 }
@@ -93,6 +97,11 @@ func (s *Storage) createTables() error {
 	}
 
 	err = createAttendanceTable(s.db)
+	if err != nil {
+		return err
+	}
+
+	err = createMessageTable(s.db)
 	if err != nil {
 		return err
 	}
@@ -129,7 +138,7 @@ func createChannelTable(db *sql.DB) error {
 func createAttendanceTable(db *sql.DB) error {
 	// Create the attendance table if it doesn't exist
 	_, err := db.Exec(`
-	CREATE TABLE IF NOT EXISTS attendance (
+	CREATE TABLE IF NOT EXISTS attendances (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		user_id INTEGER,
 		channel_id INTEGER,
@@ -144,7 +153,23 @@ func createAttendanceTable(db *sql.DB) error {
 
 	// Create an index on the user_id and channel_id columns for faster lookups
 	_, err = db.Exec(`
-	CREATE INDEX IF NOT EXISTS idx_attendance_user_channel ON attendance (user_id, channel_id)`)
+	CREATE INDEX IF NOT EXISTS idx_attendance_user_channel ON attendances (user_id, channel_id)`)
+
+	return err
+}
+
+func createMessageTable(db *sql.DB) error {
+	// Create the messages table if it doesn't exist
+	_, err := db.Exec(`
+	CREATE TABLE IF NOT EXISTS messages (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		user_id INTEGER,
+		channel_id INTEGER,
+		content TEXT NOT NULL,
+		timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+		FOREIGN KEY (user_id) REFERENCES users(id),
+		FOREIGN KEY (channel_id) REFERENCES channels(id)
+	)`)
 
 	return err
 }

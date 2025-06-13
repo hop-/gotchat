@@ -29,6 +29,7 @@ func newSignupModel(
 	userRepo core.Repository[core.User],
 	channelRepo core.Repository[core.Channel],
 	attendanceRepo core.Repository[core.Attendance],
+	messageRepo core.Repository[core.Message],
 ) *SignupModel {
 	usernameInput := newTextInput("Username")
 	usernameInput.Placeholder = "Enter your nickname"
@@ -60,7 +61,7 @@ func newSignupModel(
 			return nil
 		}
 
-		return SetNewPageMsg{newChatViewModel(user, channelRepo, attendanceRepo)}
+		return SetNewPageMsg{newChatViewModel(user, userRepo, channelRepo, attendanceRepo, messageRepo)}
 	})
 
 	backButton := newButton("Back")

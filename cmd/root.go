@@ -43,6 +43,7 @@ func buildApplication() *app.App {
 		storage.GetUserRepository(),
 		storage.GetChannelRepository(),
 		storage.GetAttendanceRepository(),
+		storage.GetMessageRepository(),
 	)
 	builder.WithUi(ui)
 

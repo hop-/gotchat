@@ -32,6 +32,7 @@ func newSigninModel(
 	userRepo core.Repository[core.User],
 	channelRepo core.Repository[core.Channel],
 	attendanceRepo core.Repository[core.Attendance],
+	messageRepo core.Repository[core.Message],
 ) *SigninModel {
 	usernameLabel := newLabel(user.Name)
 
@@ -50,7 +51,7 @@ func newSigninModel(
 			user.LastLogin = time.Now()
 			userRepo.Update(user)
 
-			return SetNewPageMsg{newChatViewModel(user, channelRepo, attendanceRepo)}
+			return SetNewPageMsg{newChatViewModel(user, userRepo, channelRepo, attendanceRepo, messageRepo)}
 		}
 
 		return ErrorMsg{Message: "Invalid password"}
