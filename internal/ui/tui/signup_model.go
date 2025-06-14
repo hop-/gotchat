@@ -4,6 +4,7 @@ import (
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/hop-/gotchat/internal/core"
+	"github.com/hop-/gotchat/internal/services"
 )
 
 type SignupModel struct {
@@ -21,15 +22,13 @@ type SignupModel struct {
 	// Stack component
 	stack *Stack
 
-	// Repos
-	userRepo core.Repository[core.User]
+	// Services
+	userManager *services.UserManager
 }
 
 func newSignupModel(
-	userRepo core.Repository[core.User],
-	channelRepo core.Repository[core.Channel],
-	attendanceRepo core.Repository[core.Attendance],
-	messageRepo core.Repository[core.Message],
+	userManager *services.UserManager,
+	chatManager *services.ChatManager,
 ) *SignupModel {
 	usernameInput := newTextInput("Username")
 	usernameInput.Placeholder = "Enter your nickname"
@@ -55,13 +54,13 @@ func newSignupModel(
 		}
 
 		user := core.NewUser(usernameInput.Value(), passwordHash)
-		err = userRepo.Create(user)
+		err = userManager.CreateUser(user)
 		if err != nil {
 			// TODO: handle error properly
 			return nil
 		}
 
-		return SetNewPageMsg{newChatViewModel(user, userRepo, channelRepo, attendanceRepo, messageRepo)}
+		return SetNewPageMsg{newChatViewModel(user, userManager, chatManager)}
 	})
 
 	backButton := newButton("Back")
@@ -76,7 +75,7 @@ func newSignupModel(
 		loginButton,
 		backButton,
 		newStack(Vertical, 1, usernameInput, passwordInput, newStack(Horizontal, 3, loginButton, backButton)),
-		userRepo,
+		userManager,
 	}
 }
 

@@ -6,6 +6,7 @@ import (
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/hop-/gotchat/internal/core"
+	"github.com/hop-/gotchat/internal/services"
 )
 
 type SigninModel struct {
@@ -23,16 +24,14 @@ type SigninModel struct {
 	// Stack component
 	stack *Stack
 
-	// Repos
-	userRepo core.Repository[core.User]
+	// Services
+	userManager *services.UserManager
 }
 
 func newSigninModel(
 	user *core.User,
-	userRepo core.Repository[core.User],
-	channelRepo core.Repository[core.Channel],
-	attendanceRepo core.Repository[core.Attendance],
-	messageRepo core.Repository[core.Message],
+	userManager *services.UserManager,
+	chatManager *services.ChatManager,
 ) *SigninModel {
 	usernameLabel := newLabel(user.Name)
 
@@ -49,9 +48,9 @@ func newSigninModel(
 	loginButton.OnAction(func() tea.Msg {
 		if core.CheckPasswordHash(passwordInput.Value(), user.Password) {
 			user.LastLogin = time.Now()
-			userRepo.Update(user)
+			userManager.UpdateUser(user)
 
-			return SetNewPageMsg{newChatViewModel(user, userRepo, channelRepo, attendanceRepo, messageRepo)}
+			return SetNewPageMsg{newChatViewModel(user, userManager, chatManager)}
 		}
 
 		return ErrorMsg{Message: "Invalid password"}
@@ -70,7 +69,7 @@ func newSigninModel(
 		loginButton,
 		backButton,
 		newStack(Vertical, 1, usernameLabel, passwordInput, newStack(Horizontal, 3, loginButton, backButton)),
-		userRepo,
+		userManager,
 	}
 }
 

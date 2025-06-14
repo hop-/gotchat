@@ -33,6 +33,20 @@ func buildApplication() *app.App {
 	storage := storage.NewStorage("file:chat.db")
 	builder.WithService(storage)
 
+	// Create a new user manager service and set it in the builder
+	userManager := services.NewUserManager(em, storage.GetUserRepository())
+	builder.WithService(userManager)
+
+	// Create a new chat manager service and set it in the builder
+	chatManager := services.NewChatManager(
+		em,
+		userManager,
+		storage.GetChannelRepository(),
+		storage.GetAttendanceRepository(),
+		storage.GetMessageRepository(),
+	)
+	builder.WithService(chatManager)
+
 	// Create a new server and set it in the builder
 	server := services.NewServer(":7665", em)
 	builder.WithService(server)
@@ -40,10 +54,8 @@ func buildApplication() *app.App {
 	// Create a new UI and set it in the builder
 	ui := tui.New(
 		em,
-		storage.GetUserRepository(),
-		storage.GetChannelRepository(),
-		storage.GetAttendanceRepository(),
-		storage.GetMessageRepository(),
+		userManager,
+		chatManager,
 	)
 	builder.WithUi(ui)
 

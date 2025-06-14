@@ -6,6 +6,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/hop-/gotchat/internal/core"
+	"github.com/hop-/gotchat/internal/services"
 )
 
 type Tui struct {
@@ -15,12 +16,10 @@ type Tui struct {
 
 func New(
 	em core.EventEmitter,
-	userRepo core.Repository[core.User],
-	channelRepo core.Repository[core.Channel],
-	attendanceRepo core.Repository[core.Attendance],
-	messageRepo core.Repository[core.Message],
+	userManager *services.UserManager,
+	chatManager *services.ChatManager,
 ) *Tui {
-	rootModel := newRootModel(newUsersListModel(userRepo, channelRepo, attendanceRepo, messageRepo), em)
+	rootModel := newRootModel(newUsersListModel(userManager, chatManager), em)
 	p := tea.NewProgram(rootModel, tea.WithAltScreen())
 
 	return &Tui{p, em}

@@ -5,11 +5,11 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/hop-/gotchat/internal/core"
+	"github.com/hop-/gotchat/internal/services"
 )
 
 type Chat struct {
-	Name string
-	Id   string
+	services.Chat
 }
 
 // FilterValue implements list.Item.
@@ -32,11 +32,9 @@ type ChatViewModel struct {
 	// Stack
 	stack *Stack
 
-	// Repos
-	userRepo       core.Repository[core.User]
-	channelRepo    core.Repository[core.Channel]
-	attendanceRepo core.Repository[core.Attendance]
-	messageRepo    core.Repository[core.Message]
+	// Services
+	userManager *services.UserManager
+	chatManager *services.ChatManager
 
 	// User entity
 	user *core.User
@@ -44,10 +42,8 @@ type ChatViewModel struct {
 
 func newChatViewModel(
 	user *core.User,
-	userRepo core.Repository[core.User],
-	channelRepo core.Repository[core.Channel],
-	attendanceRepo core.Repository[core.Attendance],
-	messageRepo core.Repository[core.Message],
+	userManager *services.UserManager,
+	chatManager *services.ChatManager,
 ) *ChatViewModel {
 	// Initialize chat list
 	chats := newItemList([]list.Item{})
@@ -70,10 +66,8 @@ func newChatViewModel(
 		chatHistory,
 		chatInput,
 		newStack(Horizontal, 3, chats, newStackWithPosition(lipgloss.Left, Vertical, 2, chatHistory, chatInput)),
-		userRepo,
-		channelRepo,
-		attendanceRepo,
-		messageRepo,
+		userManager,
+		chatManager,
 		user,
 	}
 }
@@ -122,55 +116,38 @@ func (m *ChatViewModel) View() string {
 }
 
 func (m *ChatViewModel) showAllChats() tea.Cmd {
-	attendatnces, err := m.attendanceRepo.GetAllBy("user_id", m.user.UniqueId)
+	chats, err := m.chatManager.GetChatsByUserId(m.user.Id)
 	if err != nil {
-		return Error("Failed to get attendances: " + err.Error())
+		return Error(err.Error())
 	}
 
-	errorCmds := []tea.Cmd{}
-	chats := make([]list.Item, 0, len(attendatnces))
-	for _, attendance := range attendatnces {
-		channel, err := m.channelRepo.GetOneBy("unique_id", attendance.ChannelId)
-		if err != nil {
-			errorCmds = append(errorCmds, Error("Failed to get channel: "+err.Error()))
-		}
-
-		chats = append(chats, Chat{channel.Name, channel.UniqueId})
+	chatItems := make([]list.Item, len(chats))
+	for i, chat := range chats {
+		chatItems[i] = Chat{chat}
 	}
+	m.chats.SetItems(chatItems)
 
-	m.chats.SetItems(chats)
-
-	return tea.Batch(errorCmds...)
+	return nil
 }
 
-func (m *ChatViewModel) showChatHistory(chatId string) tea.Cmd {
-	chat, err := m.channelRepo.GetOneBy("unique_id", chatId)
-	if err != nil {
-		return Error("Failed to get channel: " + err.Error())
-	}
-
+func (m *ChatViewModel) showChatHistory(chat Chat) tea.Cmd {
 	m.chatHistory.Title = chat.Name
 
-	messages, err := m.messageRepo.GetAllBy("channel_id", chat.Id)
+	chatMessages, err := m.chatManager.GetChatMessagesByChatId(chat.Id)
 	if err != nil {
-		return Error("Failed to get messages: " + err.Error())
+		return Error(err.Error())
 	}
 
-	chatMessages := make([]ChatMessage, 0, len(messages))
-
-	for _, message := range messages {
-		user, err := m.userRepo.GetOne(message.UserId)
-		if err != nil {
-			return Error("Failed to get user: " + err.Error())
-		}
-		chatMessages = append(chatMessages, ChatMessage{
-			Member: user.Name,
+	chatMessageItems := make([]ChatMessage, len(chatMessages))
+	for _, message := range chatMessages {
+		chatMessageItems = append(chatMessageItems, ChatMessage{
+			Member: message.Member,
 			Text:   message.Text,
-			At:     message.CreatedAt,
+			At:     message.At,
 		})
 	}
 
-	m.chatHistory.SetMessages(chatMessages)
+	m.chatHistory.SetMessages(chatMessageItems)
 
 	return nil
 }

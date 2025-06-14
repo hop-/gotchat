@@ -3,7 +3,7 @@ package tui
 import (
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/hop-/gotchat/internal/core"
+	"github.com/hop-/gotchat/internal/services"
 )
 
 type User struct {
@@ -26,26 +26,24 @@ type UsersListModel struct {
 	// Stack
 	stack *Stack
 
-	// Repos
-	userRepo core.Repository[core.User]
+	// Services
+	userManager *services.UserManager
 }
 
 func newUsersListModel(
-	userRepo core.Repository[core.User],
-	channelRepo core.Repository[core.Channel],
-	attendanceRepo core.Repository[core.Attendance],
-	messageRepo core.Repository[core.Message],
+	userManager *services.UserManager,
+	chatManager *services.ChatManager,
 ) *UsersListModel {
 	l := newItemList([]list.Item{})
 	l.Title = "Users"
 	l.OnSelect(func(item list.Item) tea.Cmd {
 		if userItem, ok := item.(User); ok {
-			user, err := userRepo.GetOneBy("unique_id", userItem.id)
+			user, err := userManager.GetUserByUniqueId(userItem.id)
 			if err != nil {
 				return Error(err.Error())
 			}
 
-			return PushPage(newSigninModel(user, userRepo, channelRepo, attendanceRepo, messageRepo))
+			return PushPage(newSigninModel(user, userManager, chatManager))
 		}
 
 		return nil
@@ -53,7 +51,7 @@ func newUsersListModel(
 
 	newLoginButton := newButton("New Login")
 	newLoginButton.SetActive(true)
-	newLoginButton.OnAction(PushPage(newSignupModel(userRepo, channelRepo, attendanceRepo, messageRepo)))
+	newLoginButton.OnAction(PushPage(newSignupModel(userManager, chatManager)))
 
 	exitButton := newButton("Exit")
 	exitButton.SetActive(true)
@@ -64,7 +62,7 @@ func newUsersListModel(
 		&FocusContainer{[]FocusableModel{l, newLoginButton, exitButton}, 0},
 		l,
 		newStack(Vertical, 2, l, newStack(Horizontal, 3, newLoginButton, exitButton)),
-		userRepo,
+		userManager,
 	}
 }
 
@@ -98,7 +96,7 @@ func (m *UsersListModel) View() string {
 }
 
 func (m *UsersListModel) getUsers() []list.Item {
-	users, err := m.userRepo.GetAll()
+	users, err := m.userManager.GetAllUsers()
 	if err != nil {
 		m.Frame.addError(err.Error())
 		return nil
