@@ -2,6 +2,7 @@ package tui
 
 import (
 	"context"
+	"fmt"
 	"sync"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -10,12 +11,12 @@ import (
 )
 
 type Tui struct {
-	p       *tea.Program
-	emitter core.EventEmitter
+	p  *tea.Program
+	em *core.EventManager
 }
 
 func New(
-	em core.EventEmitter,
+	em *core.EventManager,
 	userManager *services.UserManager,
 	chatManager *services.ChatManager,
 ) *Tui {
@@ -42,11 +43,17 @@ func (ui *Tui) Run(ctx context.Context, wg *sync.WaitGroup) error {
 		ui.p.Quit()
 	}()
 
+	listener := ui.em.Register(ctx)
+
+	// Filter events and send to TUI program
+	go ui.runEventFilter(listener)
+
+	// Run the TUI program
 	_, err := ui.p.Run()
 
 	// Send a quit event to the event manager when tui is closed from inside
 	if !externalQuit {
-		ui.emitter.Emit(core.QuitEvent{})
+		ui.em.Emit(core.QuitEvent{})
 	}
 
 	return err
@@ -56,4 +63,14 @@ func (ui *Tui) Close() error {
 	ui.p.Quit()
 
 	return nil
+}
+
+func (ui *Tui) runEventFilter(listener core.EventListener) {
+	for event := range listener {
+		switch event := event.(type) {
+		case core.NewMessageEvent:
+			// TODO
+			fmt.Println("New message event received:", event.Message)
+		}
+	}
 }
