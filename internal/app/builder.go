@@ -59,5 +59,6 @@ func (b *Builder) Build() *App {
 		container,
 		b.ui,
 		b.appLogic,
+		nil,
 	}
 }

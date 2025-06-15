@@ -14,14 +14,16 @@ type App struct {
 	services     *core.ServiceContainer
 	ui           ui.UI
 	logic        *logic.AppLogic
+	eventListner core.EventListener
 }
 
-func (app *App) Init() error {
-	return app.services.InitAll()
+func (a *App) Init() error {
+	return a.services.InitAll()
 }
 
 func (a *App) Run() {
 	ctx, cancel := context.WithCancel(context.Background())
+	a.eventListner = a.eventManager.Register(ctx)
 
 	wg := sync.WaitGroup{}
 
@@ -32,7 +34,7 @@ func (a *App) Run() {
 	// Run the event loop
 	isRunning := true
 	for isRunning {
-		event, err := a.eventManager.Next(ctx)
+		event, err := a.eventListner.Next(ctx)
 		if err != nil {
 			// TODO: Handle error
 			continue
@@ -52,10 +54,10 @@ func (a *App) Run() {
 	wg.Wait()
 }
 
-func (app *App) Close() {
+func (a *App) Close() {
 	// TODO: Handle errors
-	app.services.CloseAll()
+	a.services.CloseAll()
 
 	// TODO: Handle error
-	app.ui.Close()
+	a.ui.Close()
 }
