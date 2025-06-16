@@ -66,7 +66,6 @@ func (m *EventManager) Emit(e Event) {
 		default:
 			// TODO: handle the case where the channel is full
 			// Optional: log dropped events or block
-			// log.Println("EventManager: dropping event", e.Type())
 		}
 	}
 }

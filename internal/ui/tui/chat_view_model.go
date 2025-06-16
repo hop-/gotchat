@@ -8,6 +8,20 @@ import (
 	"github.com/hop-/gotchat/internal/services"
 )
 
+type SentMessageToChatMsg struct {
+	ChatId  string
+	Message string
+}
+
+func SendMessageToChat(chatId, message string) tea.Cmd {
+	return func() tea.Msg {
+		return SentMessageToChatMsg{
+			ChatId:  chatId,
+			Message: message,
+		}
+	}
+}
+
 type Chat struct {
 	services.Chat
 }
@@ -97,18 +111,28 @@ func (m *ChatViewModel) syncComponentSizes() {
 }
 
 func (m *ChatViewModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	// handle updates on frame
+	// Handle updates on frame
+	cmds := make([]tea.Cmd, 0)
 	frameCmd := m.Frame.Update(msg)
+	cmds = append(cmds, frameCmd)
 
-	switch msg.(type) {
+	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.syncComponentSizes()
+	case ChatInputMessageSentMsg:
+		currnetChat := m.chats.SelectedItem()
+		if currnetChat == nil {
+			cmds = append(cmds, Error("No chat selected"))
+		} else {
+			cmds = append(cmds, SendMessageToChat(currnetChat.(Chat).Id, msg.Message))
+		}
 	}
 
 	fc, cmd := m.FocusContainer.Update(msg)
+	cmds = append(cmds, cmd)
 	m.FocusContainer = fc
 
-	return m, tea.Batch(frameCmd, cmd)
+	return m, tea.Batch(cmds...)
 }
 
 func (m *ChatViewModel) View() string {

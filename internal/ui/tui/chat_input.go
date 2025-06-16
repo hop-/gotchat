@@ -7,7 +7,7 @@ import (
 )
 
 type ChatInputMessageSentMsg struct {
-	Content string
+	Message string
 }
 
 func ChatInputMessageSent(content string) tea.Cmd {

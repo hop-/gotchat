@@ -10,8 +10,8 @@ import (
 )
 
 type Chat struct {
-	Name string
 	Id   string
+	Name string
 }
 
 type ChatMessage struct {
@@ -80,7 +80,7 @@ func (cm *ChatManager) GetChatsByUserId(userId int) ([]Chat, error) {
 			return nil, fmt.Errorf("failed to get channel: %s", err.Error())
 		}
 
-		chats = append(chats, Chat{channel.Name, channel.UniqueId})
+		chats = append(chats, Chat{channel.UniqueId, channel.Name})
 	}
 
 	return chats, nil
