@@ -10,18 +10,18 @@ import (
 )
 
 type Server struct {
-	address   string
-	listener  *network.Listener
-	em        *core.EventManager
-	isRunning bool
+	AtomicRunningStatus
+	address  string
+	listener *network.Listener
+	em       *core.EventManager
 }
 
 func NewServer(address string, em *core.EventManager) *Server {
 	return &Server{
+		AtomicRunningStatus{},
 		address,
 		nil,
 		em,
-		false,
 	}
 }
 
@@ -46,7 +46,7 @@ func (s *Server) Run(ctx context.Context, wg *sync.WaitGroup) {
 	wg.Add(1)
 	defer wg.Done()
 
-	if s.isRunning {
+	if s.isRunning() {
 		// TODO: Handle error
 		return
 	}
@@ -56,14 +56,15 @@ func (s *Server) Run(ctx context.Context, wg *sync.WaitGroup) {
 		return
 	}
 
-	s.isRunning = true
+	s.setRunningStatus(true)
 	go func() {
 		<-ctx.Done()
-		s.isRunning = false
+
+		s.setRunningStatus(false)
 		s.listener.Close()
 	}()
 
-	for s.isRunning {
+	for s.isRunning() {
 		conn, err := s.listener.Accept()
 		if err != nil {
 			// TODO: Handle error
@@ -75,7 +76,7 @@ func (s *Server) Run(ctx context.Context, wg *sync.WaitGroup) {
 }
 
 func (s *Server) Close() error {
-	s.isRunning = false
+	s.setRunningStatus(false)
 
 	if s.listener == nil {
 		return nil
