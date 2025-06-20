@@ -50,11 +50,15 @@ func (a *App) Run() {
 
 	//cancel all services and UI
 	cancel()
+
+	// Close the application gracefully
+	a.close()
+
 	// Wait for all goroutines to finish
 	wg.Wait()
 }
 
-func (a *App) Close() {
+func (a *App) close() {
 	// TODO: Handle errors
 	a.services.CloseAll()
 

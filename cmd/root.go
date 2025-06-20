@@ -17,7 +17,6 @@ func Execute() {
 		log.Fatal("error:", err)
 	}
 
-	defer application.Close()
 	application.Run()
 }
 
@@ -47,9 +46,16 @@ func buildApplication() *app.App {
 	)
 	builder.WithService(chatManager)
 
-	// Create a new server and set it in the builder
-	server := services.NewServer(":7665", em)
-	builder.WithService(server)
+	// Create a new server
+	server := services.NewServer(":7665")
+
+	// Create a new connection manager and set it in the builder
+	connectionManager := services.NewConnectionManager(
+		em,
+		server,
+	)
+
+	builder.WithService(connectionManager)
 
 	// Create a new UI and set it in the builder
 	ui := tui.New(
