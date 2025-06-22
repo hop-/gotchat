@@ -10,6 +10,20 @@ import (
 	"github.com/hop-/gotchat/internal/network"
 )
 
+// Events
+type NewConnection struct {
+	// TODO: Define fields for new connection event
+}
+
+type FialedNewConnection struct {
+	// TODO: Define fields for failed new connection event
+}
+
+type ConnectionClosed struct {
+	// TODO: Define fields for connection closed event
+}
+
+// The Service
 type ConnectionManager struct {
 	AtomicRunningStatus
 	connections  map[string]network.Conn
@@ -54,21 +68,25 @@ func (cm *ConnectionManager) Run(ctx context.Context, wg *sync.WaitGroup) {
 
 	cm.setRunningStatus(true)
 
-	go cm.handleEvents(ctx, wg, listener)
+	go cm.handleApplicationEvents(ctx, wg, listener)
 
 	for cm.isRunning() {
 		select {
 		case <-ctx.Done():
+			// Context is done, stop the connection manager
 			cm.setRunningStatus(false)
 		default:
 			conn, err := cm.server.Accept()
 			if err != nil {
 				log.Printf("failed to accept connection: %v\n", err)
+				cm.emitEvent(FialedNewConnection{})
 
 				continue
 			}
 
-			go handleConnection(conn)
+			cm.emitEvent(NewConnection{})
+
+			go cm.handleConnection(conn)
 
 			// TODO: Add connection to the map
 		}
@@ -83,7 +101,11 @@ func (cm *ConnectionManager) Close() error {
 	return nil
 }
 
-func (cm *ConnectionManager) handleEvents(ctx context.Context, wg *sync.WaitGroup, listener core.EventListener) {
+func (cm *ConnectionManager) emitEvent(event core.Event) {
+	cm.eventManager.Emit(event)
+}
+
+func (cm *ConnectionManager) handleApplicationEvents(ctx context.Context, wg *sync.WaitGroup, listener core.EventListener) {
 	wg.Add(1)
 	defer wg.Done()
 
@@ -105,6 +127,15 @@ func (cm *ConnectionManager) handleEvents(ctx context.Context, wg *sync.WaitGrou
 	}
 }
 
+func (cm *ConnectionManager) handleConnection(conn *network.Conn) {
+	defer conn.Close()
+	defer cm.emitEvent(ConnectionClosed{})
+
+	// Handle the connection
+	// TODO: Implement connection handling logic
+}
+
+// The Network Server
 type Server struct {
 	address  string
 	listener *network.Listener
@@ -153,11 +184,4 @@ func (s *Server) Close() error {
 	}
 
 	return s.listener.Close()
-}
-
-func handleConnection(conn *network.Conn) {
-	defer conn.Close()
-
-	// Handle the connection
-	// TODO: Implement connection handling logic
 }
