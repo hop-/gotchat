@@ -9,7 +9,7 @@ import (
 	"github.com/hop-/gotchat/internal/ui/tui"
 )
 
-func Execute() {
+func ExecuteApp() {
 	application := buildApplication()
 
 	err := application.Init()
@@ -63,7 +63,7 @@ func buildApplication() *app.App {
 		userManager,
 		chatManager,
 	)
-	builder.WithUi(ui)
+	builder.WithUI(ui)
 
 	return builder.Build()
 }

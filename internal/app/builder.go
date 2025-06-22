@@ -4,7 +4,6 @@ import (
 	"log"
 
 	"github.com/hop-/gotchat/internal/core"
-	"github.com/hop-/gotchat/internal/logic"
 	"github.com/hop-/gotchat/internal/ui"
 )
 
@@ -12,13 +11,11 @@ type Builder struct {
 	em       *core.EventManager
 	ui       ui.UI
 	services []core.Service
-	appLogic *logic.AppLogic
 }
 
 func NewBuilder() *Builder {
 	return &Builder{
 		services: make([]core.Service, 0),
-		appLogic: logic.New(),
 	}
 }
 
@@ -28,7 +25,7 @@ func (b *Builder) WithEventManager(bufferSize int) *Builder {
 	return b
 }
 
-func (b *Builder) WithUi(ui ui.UI) *Builder {
+func (b *Builder) WithUI(ui ui.UI) *Builder {
 	b.ui = ui
 
 	return b
@@ -58,7 +55,5 @@ func (b *Builder) Build() *App {
 		b.em,
 		container,
 		b.ui,
-		b.appLogic,
-		nil,
 	}
 }

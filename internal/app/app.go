@@ -5,7 +5,6 @@ import (
 	"sync"
 
 	"github.com/hop-/gotchat/internal/core"
-	"github.com/hop-/gotchat/internal/logic"
 	"github.com/hop-/gotchat/internal/ui"
 )
 
@@ -13,8 +12,6 @@ type App struct {
 	eventManager *core.EventManager
 	services     *core.ServiceContainer
 	ui           ui.UI
-	logic        *logic.AppLogic
-	eventListner core.EventListener
 }
 
 func (a *App) Init() error {
@@ -23,7 +20,7 @@ func (a *App) Init() error {
 
 func (a *App) Run() {
 	ctx, cancel := context.WithCancel(context.Background())
-	a.eventListner = a.eventManager.Register(ctx)
+	eventListner := a.eventManager.Register(ctx)
 
 	wg := sync.WaitGroup{}
 
@@ -34,7 +31,7 @@ func (a *App) Run() {
 	// Run the event loop
 	isRunning := true
 	for isRunning {
-		event, err := a.eventListner.Next(ctx)
+		event, err := eventListner.Next(ctx)
 		if err != nil {
 			// TODO: Handle error
 			continue
@@ -44,8 +41,6 @@ func (a *App) Run() {
 		case core.QuitEvent:
 			isRunning = false
 		}
-
-		a.logic.Handle(event)
 	}
 
 	//cancel all services and UI
