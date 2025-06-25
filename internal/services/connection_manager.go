@@ -12,15 +12,26 @@ import (
 
 // Events
 type NewConnection struct {
-	// TODO: Define fields for new connection event
-}
-
-type FialedNewConnection struct {
-	// TODO: Define fields for failed new connection event
+	Id   string
+	Conn *network.Conn
 }
 
 type ConnectionClosed struct {
-	// TODO: Define fields for connection closed event
+	Id string
+}
+
+type ConnectionAcceptError struct {
+	Err error
+}
+
+type NewMessage struct {
+	ConnId string
+	// TODO: add message payload
+}
+
+type MessageReadError struct {
+	ConnId string
+	Err    error
 }
 
 // The Service
@@ -79,16 +90,14 @@ func (cm *ConnectionManager) Run(ctx context.Context, wg *sync.WaitGroup) {
 			conn, err := cm.server.Accept()
 			if err != nil {
 				log.Printf("failed to accept connection: %v\n", err)
-				cm.emitEvent(FialedNewConnection{})
+				cm.emitEvent(ConnectionAcceptError{err})
 
 				continue
 			}
 
-			cm.emitEvent(NewConnection{})
+			connId := cm.addConnection(conn)
 
-			go cm.handleConnection(conn)
-
-			// TODO: Add connection to the map
+			go cm.handleConnection(connId, conn)
 		}
 	}
 }
@@ -98,6 +107,12 @@ func (cm *ConnectionManager) Close() error {
 	cm.setRunningStatus(false)
 	cm.server.Close()
 
+	for _, conn := range cm.connections {
+		if err := conn.Close(); err != nil {
+			log.Printf("failed to close connection: %v\n", err)
+		}
+	}
+
 	return nil
 }
 
@@ -105,7 +120,31 @@ func (cm *ConnectionManager) emitEvent(event core.Event) {
 	cm.eventManager.Emit(event)
 }
 
-func (cm *ConnectionManager) handleApplicationEvents(ctx context.Context, wg *sync.WaitGroup, listener core.EventListener) {
+func (cm *ConnectionManager) addConnection(conn *network.Conn) string {
+	cm.mu.Lock()
+	defer cm.mu.Unlock()
+	id := generateUuid()
+	cm.connections[id] = *conn
+
+	cm.emitEvent(NewConnection{id, conn})
+
+	return id
+}
+
+func (cm *ConnectionManager) removeConnection(id string) {
+	cm.mu.Lock()
+	defer cm.mu.Unlock()
+
+	delete(cm.connections, id)
+
+	cm.emitEvent(ConnectionClosed{id})
+}
+
+func (cm *ConnectionManager) handleApplicationEvents(
+	ctx context.Context,
+	wg *sync.WaitGroup,
+	listener core.EventListener,
+) {
 	wg.Add(1)
 	defer wg.Done()
 
@@ -127,12 +166,22 @@ func (cm *ConnectionManager) handleApplicationEvents(ctx context.Context, wg *sy
 	}
 }
 
-func (cm *ConnectionManager) handleConnection(conn *network.Conn) {
+func (cm *ConnectionManager) handleConnection(connId string, conn *network.Conn) {
 	defer conn.Close()
-	defer cm.emitEvent(ConnectionClosed{})
+	defer cm.removeConnection(connId)
 
-	// Handle the connection
-	// TODO: Implement connection handling logic
+	// TODO: Handle handshake or any initial setup for the connection
+
+	for cm.isRunning() {
+		m, err := conn.Read()
+		if err != nil {
+			cm.emitEvent(MessageReadError{connId, err})
+		}
+
+		// TODO: Handle the message and emit an event
+		_ = m
+		cm.emitEvent(NewMessage{connId})
+	}
 }
 
 // The Network Server

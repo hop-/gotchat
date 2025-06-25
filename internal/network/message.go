@@ -2,6 +2,7 @@ package network
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 )
 
@@ -23,6 +24,19 @@ func (m *Message) Headers() map[string]string {
 
 func (m *Message) Body() []byte {
 	return m.body
+}
+
+func (m *Message) BodyTo(v any) error {
+	if len(m.body) == 0 {
+		return fmt.Errorf("message body is empty")
+	}
+
+	err := json.Unmarshal(m.body, v)
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal message body: %w", err)
+	}
+
+	return nil
 }
 
 func (m *Message) SetHeader(key, value string) {

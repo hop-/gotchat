@@ -1,6 +1,10 @@
 package services
 
-import "sync"
+import (
+	"sync"
+
+	"github.com/google/uuid"
+)
 
 type AtomicRunningStatus struct {
 	runningStatus bool
@@ -19,4 +23,12 @@ func (ars *AtomicRunningStatus) isRunning() bool {
 	defer ars.mu.RUnlock()
 
 	return ars.runningStatus
+}
+
+func generateUuid() string {
+	id, err := uuid.NewRandom()
+	if err != nil {
+		return ""
+	}
+	return id.String()
 }
