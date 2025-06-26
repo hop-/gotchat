@@ -24,6 +24,10 @@ type ConnectionAcceptError struct {
 	Err error
 }
 
+type ConnectionError struct {
+	Err error
+}
+
 type NewMessage struct {
 	ConnId string
 	// TODO: add message payload
@@ -34,7 +38,7 @@ type MessageReadError struct {
 	Err    error
 }
 
-// The Service
+// ConnectionManager Service
 type ConnectionManager struct {
 	AtomicRunningStatus
 	connections  map[string]network.Conn
@@ -116,6 +120,21 @@ func (cm *ConnectionManager) Close() error {
 	return nil
 }
 
+func (cm *ConnectionManager) Connect(address string) (string, error) {
+	client := NewClient(address)
+	conn, err := client.Connect()
+	if err != nil {
+		cm.emitEvent(ConnectionError{err})
+
+		return "", err
+	}
+
+	connId := cm.addConnection(conn)
+	go cm.handleConnection(connId, conn)
+
+	return connId, nil
+}
+
 func (cm *ConnectionManager) emitEvent(event core.Event) {
 	cm.eventManager.Emit(event)
 }
@@ -184,7 +203,7 @@ func (cm *ConnectionManager) handleConnection(connId string, conn *network.Conn)
 	}
 }
 
-// The Network Server
+// Network Server
 type Server struct {
 	address  string
 	listener *network.Listener
@@ -233,4 +252,26 @@ func (s *Server) Close() error {
 	}
 
 	return s.listener.Close()
+}
+
+// Network Client
+type Client struct {
+	address string
+}
+
+func NewClient(address string) *Client {
+	return &Client{
+		address,
+	}
+}
+
+func (c *Client) Connect() (*network.Conn, error) {
+	t := network.NewTcpTransport()
+
+	conn, err := t.Connect(c.address)
+	if err != nil {
+		return nil, err
+	}
+
+	return conn, nil
 }
