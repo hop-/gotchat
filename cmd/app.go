@@ -13,7 +13,7 @@ import (
 
 var appCmd = &cobra.Command{
 	Use:   "app",
-	Short: "Run the app command (same as default)",
+	Short: "Run the application (same as default)",
 	Run: func(cmd *cobra.Command, args []string) {
 		executeApp()
 	},

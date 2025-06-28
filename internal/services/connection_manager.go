@@ -59,7 +59,9 @@ func NewConnectionManager(eventManager *core.EventManager, server *Server) *Conn
 
 // Init implements core.Service.
 func (cm *ConnectionManager) Init() error {
-	cm.server.Init()
+	if cm.server != nil {
+		cm.server.Init()
+	}
 
 	return nil
 }
@@ -71,9 +73,6 @@ func (cm *ConnectionManager) Name() string {
 
 // Run implements core.Service.
 func (cm *ConnectionManager) Run(ctx context.Context, wg *sync.WaitGroup) {
-	wg.Add(1)
-	defer wg.Done()
-
 	if cm.isRunning() {
 		// TODO: Handle error
 		return
@@ -83,33 +82,24 @@ func (cm *ConnectionManager) Run(ctx context.Context, wg *sync.WaitGroup) {
 
 	cm.setRunningStatus(true)
 
-	go cm.handleApplicationEvents(ctx, wg, listener)
+	// If no server is configured, run in client-only mode
+	if cm.server == nil {
+		log.Println("No server configured, running in client-only mode")
+		cm.handleApplicationEvents(ctx, wg, listener)
 
-	for cm.isRunning() {
-		select {
-		case <-ctx.Done():
-			// Context is done, stop the connection manager
-			cm.setRunningStatus(false)
-		default:
-			conn, err := cm.server.Accept()
-			if err != nil {
-				log.Printf("failed to accept connection: %v\n", err)
-				cm.emitEvent(ConnectionAcceptError{err})
-
-				continue
-			}
-
-			connId := cm.addConnection(conn)
-
-			go cm.handleConnection(connId, conn)
-		}
+		return
 	}
+
+	go cm.handleApplicationEvents(ctx, wg, listener)
+	cm.runServer(ctx, wg)
 }
 
 // Close implements core.Service.
 func (cm *ConnectionManager) Close() error {
 	cm.setRunningStatus(false)
-	cm.server.Close()
+	if cm.server != nil {
+		cm.server.Close()
+	}
 
 	for _, conn := range cm.connections {
 		if err := conn.Close(); err != nil {
@@ -181,6 +171,31 @@ func (cm *ConnectionManager) handleApplicationEvents(
 			switch e.(type) {
 			// TODO: Handle specific events
 			}
+		}
+	}
+}
+
+func (cm *ConnectionManager) runServer(ctx context.Context, wg *sync.WaitGroup) {
+	wg.Add(1)
+	defer wg.Done()
+
+	for cm.isRunning() {
+		select {
+		case <-ctx.Done():
+			// Context is done, stop the connection manager
+			cm.setRunningStatus(false)
+		default:
+			conn, err := cm.server.Accept()
+			if err != nil {
+				log.Printf("failed to accept connection: %v\n", err)
+				cm.emitEvent(ConnectionAcceptError{err})
+
+				continue
+			}
+
+			connId := cm.addConnection(conn)
+
+			go cm.handleConnection(connId, conn)
 		}
 	}
 }
