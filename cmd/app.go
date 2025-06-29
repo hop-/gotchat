@@ -5,6 +5,7 @@ import (
 	"log"
 
 	"github.com/hop-/gotchat/internal/app"
+	"github.com/hop-/gotchat/internal/config"
 	"github.com/hop-/gotchat/internal/services"
 	"github.com/hop-/gotchat/internal/storage"
 	"github.com/hop-/gotchat/internal/ui/tui"
@@ -20,7 +21,20 @@ var appCmd = &cobra.Command{
 }
 
 func init() {
-	appCmd.Flags().IntVarP(&port, "port", "p", 7665, "port on which connection listener will be started")
+	// Flags for app command
+	appCmd.Flags().IntVarP(
+		&generalServerPort,
+		"port", "p",
+		config.GetServerPort(),
+		"port on which connection listener will be started",
+	)
+	appCmd.Flags().StringVarP(
+		&generalDataStorageFile,
+		"storage",
+		"s",
+		config.GetDataStorageFilePath(),
+		"file to store chat data and configurations",
+	)
 }
 
 func executeApp() {
@@ -43,7 +57,7 @@ func buildApplication() *app.App {
 	em := builder.GetEventManager()
 
 	// Create a new storage and set it in the builder
-	storage := storage.NewStorage("file:chat.db")
+	storage := storage.NewStorage("file:" + generalDataStorageFile)
 	builder.WithService(storage)
 
 	// Create a new user manager service and set it in the builder
@@ -61,7 +75,7 @@ func buildApplication() *app.App {
 	builder.WithService(chatManager)
 
 	// Create a new server
-	portStr := fmt.Sprintf(":%d", port)
+	portStr := fmt.Sprintf(":%d", generalServerPort)
 	server := services.NewServer(portStr)
 
 	// Create a new connection manager and set it in the builder

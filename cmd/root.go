@@ -1,12 +1,14 @@
 package cmd
 
 import (
+	"log"
+	"os"
+
+	"github.com/hop-/gotchat/internal/config"
 	"github.com/spf13/cobra"
 )
 
 var (
-	port int = 7665
-
 	rootCmd = &cobra.Command{
 		Use:   "gotchat",
 		Short: "A simple chat application",
@@ -19,8 +21,20 @@ var (
 
 // autorun: This function is called by the main package to initialize the command line interface.
 func init() {
-	// Flags for root and "app"
-	rootCmd.Flags().IntVarP(&port, "port", "p", 7665, "port on which connection listener will be started")
+	// Flags for root command
+	rootCmd.Flags().IntVarP(
+		&generalServerPort,
+		"port", "p",
+		config.GetServerPort(),
+		"port on which connection listener will be started",
+	)
+	rootCmd.Flags().StringVarP(
+		&generalDataStorageFile,
+		"storage",
+		"s",
+		config.GetDataStorageFilePath(),
+		"file to store chat data and configurations",
+	)
 
 	// Add subcommands
 	rootCmd.AddCommand(appCmd)
@@ -28,5 +42,15 @@ func init() {
 }
 
 func Execute() {
+	err := createRootDirIfNotExists()
+	if err != nil {
+		log.Fatalf("Failed to create root directory: %v", err)
+	}
 	cobra.CheckErr(rootCmd.Execute())
+}
+
+func createRootDirIfNotExists() error {
+	rootDir := config.GetRootDir()
+
+	return os.MkdirAll(rootDir, 0755)
 }

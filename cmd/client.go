@@ -4,6 +4,7 @@ import (
 	"log"
 
 	"github.com/hop-/gotchat/internal/app"
+	"github.com/hop-/gotchat/internal/config"
 	"github.com/hop-/gotchat/internal/services"
 	"github.com/hop-/gotchat/internal/storage"
 	"github.com/hop-/gotchat/internal/ui/tui"
@@ -22,6 +23,14 @@ var (
 )
 
 func init() {
+	// Flags for client command
+	clientCmd.Flags().StringVarP(
+		&generalDataStorageFile,
+		"storage",
+		"s",
+		config.GetDataStorageFilePath(),
+		"file to store chat data and configurations",
+	)
 }
 
 func executeClient() {
@@ -44,7 +53,7 @@ func buildApplicationWithoutServer() *app.App {
 	em := builder.GetEventManager()
 
 	// Create a new storage and set it in the builder
-	storage := storage.NewStorage("file:chat.db")
+	storage := storage.NewStorage("file:" + generalDataStorageFile)
 	builder.WithService(storage)
 
 	// Create a new user manager service and set it in the builder
