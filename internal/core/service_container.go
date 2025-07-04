@@ -36,11 +36,16 @@ func (c *ServiceContainer) RunAll(ctx context.Context, wg *sync.WaitGroup) error
 	return nil
 }
 
-func (c *ServiceContainer) CloseAll() error {
+func (c *ServiceContainer) CloseAll() []error {
+	errs := make([]error, 0, len(c.services))
 	for _, s := range c.services {
 		if err := s.Close(); err != nil {
-			return fmt.Errorf("service %s failed to close: %w", s.Name(), err)
+			errs = append(errs, fmt.Errorf("service %s failed to close: %w", s.Name(), err))
 		}
+	}
+
+	if len(errs) != 0 {
+		return errs
 	}
 
 	return nil

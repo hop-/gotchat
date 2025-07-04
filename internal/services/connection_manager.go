@@ -74,7 +74,7 @@ func (cm *ConnectionManager) Name() string {
 // Run implements core.Service.
 func (cm *ConnectionManager) Run(ctx context.Context, wg *sync.WaitGroup) {
 	if cm.isRunning() {
-		// TODO: Handle error
+		log.Println("ConnectionManager is already running")
 		return
 	}
 
@@ -164,7 +164,7 @@ func (cm *ConnectionManager) handleApplicationEvents(
 		default:
 			e, err := listener.Next(ctx)
 			if err != nil {
-				// TODO: Handle error
+				log.Printf("failed to get next event: %v\n", err)
 				continue
 			}
 
@@ -238,6 +238,7 @@ func (s *Server) Init() error {
 	}
 	t := network.NewTcpTransport()
 
+	log.Printf("Starting server on %s\n", s.address)
 	listener, err := t.Listen(s.address)
 	if err != nil {
 		return err
@@ -283,6 +284,7 @@ func NewClient(address string) *Client {
 func (c *Client) Connect() (*network.Conn, error) {
 	t := network.NewTcpTransport()
 
+	log.Printf("Connecting to server at %s\n", c.address)
 	conn, err := t.Connect(c.address)
 	if err != nil {
 		return nil, err

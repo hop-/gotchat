@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"log"
 	"sync"
 
 	"github.com/hop-/gotchat/internal/core"
@@ -33,7 +34,8 @@ func (a *App) Run() {
 	for isRunning {
 		event, err := eventListner.Next(ctx)
 		if err != nil {
-			// TODO: Handle error
+			// TODO: Handle error if needed
+			log.Printf("failed to get next event: %v\n", err)
 			continue
 		}
 
@@ -54,9 +56,15 @@ func (a *App) Run() {
 }
 
 func (a *App) close() {
-	// TODO: Handle errors
-	a.services.CloseAll()
+	errs := a.services.CloseAll()
+	if len(errs) > 0 {
+		for _, err := range errs {
+			log.Printf("failed to close service: %v\n", err)
+		}
+	}
 
-	// TODO: Handle error
-	a.ui.Close()
+	err := a.ui.Close()
+	if err != nil {
+		log.Printf("failed to close UI: %v\n", err)
+	}
 }
