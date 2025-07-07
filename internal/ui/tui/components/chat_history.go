@@ -1,4 +1,4 @@
-package tui
+package components
 
 import (
 	"time"
@@ -36,7 +36,7 @@ type ChatHistory struct {
 	titleStyle   *lipgloss.Style
 }
 
-func newChatHistory(you string, otherMembers ...string) *ChatHistory {
+func NewChatHistory(you string, otherMembers ...string) *ChatHistory {
 	vp := viewport.New(2, 2)
 	vp.SetContent("Chat history will be displayed here.")
 

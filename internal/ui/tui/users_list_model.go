@@ -4,6 +4,8 @@ import (
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/hop-/gotchat/internal/services"
+	"github.com/hop-/gotchat/internal/ui/tui/commands"
+	"github.com/hop-/gotchat/internal/ui/tui/components"
 )
 
 type User struct {
@@ -16,15 +18,15 @@ func (i User) FilterValue() string { return i.name }
 
 type UsersListModel struct {
 	// Frame component
-	Frame
+	components.Frame
 	// Focusable component
-	*FocusContainer
+	*components.FocusContainer
 
 	// Component
-	list *ItemList
+	list *components.ItemList
 
 	// Stack
-	stack *Stack
+	stack *components.Stack
 
 	// Services
 	userManager *services.UserManager
@@ -34,34 +36,40 @@ func newUsersListModel(
 	userManager *services.UserManager,
 	chatManager *services.ChatManager,
 ) *UsersListModel {
-	l := newItemList([]list.Item{})
+	l := components.NewItemList([]list.Item{})
 	l.Title = "Users"
 	l.OnSelect(func(item list.Item) tea.Cmd {
 		if userItem, ok := item.(User); ok {
 			user, err := userManager.GetUserByUniqueId(userItem.id)
 			if err != nil {
-				return Error(err.Error())
+				return commands.Error(err.Error())
 			}
 
-			return PushPage(newSigninModel(user, userManager, chatManager))
+			return commands.PushPage(newSigninModel(user, userManager, chatManager))
 		}
 
 		return nil
 	})
 
-	newLoginButton := newButton("New Login")
+	newLoginButton := components.NewButton("New Login")
 	newLoginButton.SetActive(true)
-	newLoginButton.OnAction(PushPage(newSignupModel(userManager, chatManager)))
+	newLoginButton.OnAction(commands.PushPage(newSignupModel(userManager, chatManager)))
 
-	exitButton := newButton("Exit")
+	exitButton := components.NewButton("Exit")
 	exitButton.SetActive(true)
-	exitButton.OnAction(Shutdown)
+	exitButton.OnAction(commands.Shutdown)
 
 	return &UsersListModel{
-		Frame{},
-		&FocusContainer{[]FocusableModel{l, newLoginButton, exitButton}, 0},
+		components.Frame{},
+		components.NewFocusContainer([]components.FocusableModel{l, newLoginButton, exitButton}),
 		l,
-		newStack(Vertical, 2, l, newStack(Horizontal, 3, newLoginButton, exitButton)),
+		components.NewStack(
+			components.Vertical, 2,
+			l, components.NewStack(
+				components.Horizontal, 3,
+				newLoginButton, exitButton,
+			),
+		),
 		userManager,
 	}
 }
@@ -98,7 +106,7 @@ func (m *UsersListModel) View() string {
 func (m *UsersListModel) getUsers() []list.Item {
 	users, err := m.userManager.GetAllUsers()
 	if err != nil {
-		m.Frame.addError(err.Error())
+		m.Frame.AddError(err.Error())
 		return nil
 	}
 

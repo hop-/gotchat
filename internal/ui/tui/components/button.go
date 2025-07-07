@@ -1,4 +1,4 @@
-package tui
+package components
 
 import (
 	"fmt"
@@ -17,7 +17,7 @@ type Button struct {
 	onActionCmd    tea.Cmd
 }
 
-func newButton(text string) *Button {
+func NewButton(text string) *Button {
 	buttonText := fmt.Sprintf("[ %s ]", text)
 
 	return &Button{

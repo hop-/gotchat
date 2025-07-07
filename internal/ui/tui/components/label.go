@@ -1,4 +1,4 @@
-package tui
+package components
 
 import tea "github.com/charmbracelet/bubbletea"
 
@@ -6,7 +6,7 @@ type Label struct {
 	text string
 }
 
-func newLabel(text string) *Label {
+func NewLabel(text string) *Label {
 	return &Label{text: text}
 }
 

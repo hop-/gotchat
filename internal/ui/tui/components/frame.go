@@ -1,8 +1,9 @@
-package tui
+package components
 
 import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/hop-/gotchat/internal/ui/tui/commands"
 )
 
 var (
@@ -16,15 +17,15 @@ type Frame struct {
 
 func (m *Frame) Update(msg tea.Msg) tea.Cmd {
 	switch msg := msg.(type) {
-	case ErrorMsg:
-		m.addError(msg.Message)
+	case commands.ErrorMsg:
+		m.AddError(msg.Message)
 	case tea.WindowSizeMsg:
 		frameWidth = msg.Width - 4
 		frameHeight = msg.Height - 2
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "ctrl+c", "ctrl+d", "ctrl+q":
-			return Shutdown
+			return commands.Shutdown
 		}
 	}
 
@@ -48,6 +49,6 @@ func (m *Frame) Height() int {
 	return frameHeight
 }
 
-func (m *Frame) addError(e string) {
+func (m *Frame) AddError(e string) {
 	m.errors = append(m.errors, e)
 }

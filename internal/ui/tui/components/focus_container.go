@@ -1,10 +1,17 @@
-package tui
+package components
 
 import tea "github.com/charmbracelet/bubbletea"
 
 type FocusContainer struct {
 	items      []FocusableModel
 	focusIndex int
+}
+
+func NewFocusContainer(items []FocusableModel) *FocusContainer {
+	return &FocusContainer{
+		items:      items,
+		focusIndex: 0,
+	}
 }
 
 func (fc *FocusContainer) Init() tea.Cmd {

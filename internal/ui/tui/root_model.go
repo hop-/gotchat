@@ -3,6 +3,7 @@ package tui
 import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/hop-/gotchat/internal/core"
+	"github.com/hop-/gotchat/internal/ui/tui/commands"
 )
 
 type RootModel struct {
@@ -47,27 +48,27 @@ func (m *RootModel) Init() tea.Cmd {
 
 func (m *RootModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
-	case SetNewPageMsg:
+	case commands.SetNewPageMsg:
 		// Reset the page stack with the new page
 		m.pageStack = []tea.Model{msg.Page}
 
 		return m, m.currentPage().Init()
-	case PushPageMsg:
+	case commands.PushPageMsg:
 		m.pushPage(msg.Page)
 
 		return m, m.currentPage().Init()
-	case PopPageMsg:
+	case commands.PopPageMsg:
 		if len(m.pageStack) > 1 {
 			m.popPage()
 		} else {
-			return m, Shutdown
+			return m, commands.Shutdown
 		}
-	case ShutdownMsg:
+	case commands.ShutdownMsg:
 		// Setup shutdown screen
 		m.pageStack = []tea.Model{newShutdownModel()}
 
 		return m, m.currentPage().Init()
-	case InternalQuitMsg:
+	case commands.InternalQuitMsg:
 		m.emitter.Emit(core.QuitEvent{})
 	}
 

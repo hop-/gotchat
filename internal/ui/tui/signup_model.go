@@ -5,22 +5,24 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/hop-/gotchat/internal/core"
 	"github.com/hop-/gotchat/internal/services"
+	"github.com/hop-/gotchat/internal/ui/tui/commands"
+	"github.com/hop-/gotchat/internal/ui/tui/components"
 )
 
 type SignupModel struct {
 	// Frame component
-	Frame
+	components.Frame
 	// Focusable container
-	*FocusContainer
+	*components.FocusContainer
 
 	// Components
-	usernameInput *TextInput
-	passwordInput *TextInput
-	loginButton   *Button
-	backButton    *Button
+	usernameInput *components.TextInput
+	passwordInput *components.TextInput
+	loginButton   *components.Button
+	backButton    *components.Button
 
 	// Stack component
-	stack *Stack
+	stack *components.Stack
 
 	// Services
 	userManager *services.UserManager
@@ -30,12 +32,12 @@ func newSignupModel(
 	userManager *services.UserManager,
 	chatManager *services.ChatManager,
 ) *SignupModel {
-	usernameInput := newTextInput("Username")
+	usernameInput := components.NewTextInput("Username")
 	usernameInput.Placeholder = "Enter your nickname"
 	usernameInput.CharLimit = 128
 	usernameInput.Width = 20
 
-	passwordInput := newTextInput("Password")
+	passwordInput := components.NewTextInput("Password")
 	passwordInput.Placeholder = "Enter your password"
 	passwordInput.CharLimit = 256
 	passwordInput.Width = 20
@@ -44,7 +46,7 @@ func newSignupModel(
 
 	// TODO: add password confirmation input
 
-	loginButton := newButton("Login")
+	loginButton := components.NewButton("Login")
 	loginButton.SetActive(false)
 	loginButton.OnAction(func() tea.Msg {
 		passwordHash, err := core.HashPassword(passwordInput.Value())
@@ -60,21 +62,27 @@ func newSignupModel(
 			return nil
 		}
 
-		return SetNewPageMsg{newChatViewModel(user, userManager, chatManager)}
+		return commands.SetNewPageMsg{Page: newChatViewModel(user, userManager, chatManager)}
 	})
 
-	backButton := newButton("Back")
+	backButton := components.NewButton("Back")
 	backButton.SetActive(true)
-	backButton.OnAction(PopPage)
+	backButton.OnAction(commands.PopPage)
 
 	return &SignupModel{
-		Frame{},
-		&FocusContainer{[]FocusableModel{usernameInput, passwordInput, loginButton, backButton}, 0},
+		components.Frame{},
+		components.NewFocusContainer([]components.FocusableModel{usernameInput, passwordInput, loginButton, backButton}),
 		usernameInput,
 		passwordInput,
 		loginButton,
 		backButton,
-		newStack(Vertical, 1, usernameInput, passwordInput, newStack(Horizontal, 3, loginButton, backButton)),
+		components.NewStack(
+			components.Vertical, 1,
+			usernameInput, passwordInput, components.NewStack(
+				components.Horizontal, 3,
+				loginButton, backButton,
+			),
+		),
 		userManager,
 	}
 }

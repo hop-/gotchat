@@ -1,4 +1,4 @@
-package tui
+package components
 
 import (
 	"strings"
@@ -21,11 +21,11 @@ type Stack struct {
 	draw        func(...string) string
 }
 
-func newStack(orientation Orientation, gap int, components ...tea.Model) *Stack {
-	return newStackWithPosition(lipgloss.Center, orientation, gap, components...)
+func NewStack(orientation Orientation, gap int, components ...tea.Model) *Stack {
+	return NewStackWithPosition(lipgloss.Center, orientation, gap, components...)
 }
 
-func newStackWithPosition(pos lipgloss.Position, orientation Orientation, gap int, components ...tea.Model) *Stack {
+func NewStackWithPosition(pos lipgloss.Position, orientation Orientation, gap int, components ...tea.Model) *Stack {
 	draw := func(components ...string) string {
 		return lipgloss.JoinHorizontal(pos, components...)
 	}

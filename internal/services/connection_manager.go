@@ -289,6 +289,7 @@ func (c *Client) Connect() (*network.Conn, error) {
 	if err != nil {
 		return nil, err
 	}
+	log.Printf("Connected\n")
 
 	return conn, nil
 }

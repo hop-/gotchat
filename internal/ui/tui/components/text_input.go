@@ -1,4 +1,4 @@
-package tui
+package components
 
 import (
 	"fmt"
@@ -13,7 +13,7 @@ type TextInput struct {
 	isActive bool
 }
 
-func newTextInput(label string) *TextInput {
+func NewTextInput(label string) *TextInput {
 	ti := textinput.New()
 
 	return &TextInput{

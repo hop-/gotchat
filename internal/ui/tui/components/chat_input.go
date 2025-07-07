@@ -1,4 +1,4 @@
-package tui
+package components
 
 import (
 	"github.com/charmbracelet/bubbles/textarea"
@@ -21,7 +21,7 @@ type ChatInput struct {
 	isActive bool
 }
 
-func newChatInput() *ChatInput {
+func NewChatInput() *ChatInput {
 	textArea := textarea.New()
 	textArea.Placeholder = "Send a message..."
 	textArea.Prompt = "┃ "

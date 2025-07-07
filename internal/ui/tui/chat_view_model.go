@@ -6,6 +6,8 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/hop-/gotchat/internal/core"
 	"github.com/hop-/gotchat/internal/services"
+	"github.com/hop-/gotchat/internal/ui/tui/commands"
+	"github.com/hop-/gotchat/internal/ui/tui/components"
 )
 
 type SentMessageToChatMsg struct {
@@ -33,18 +35,18 @@ func (c Chat) FilterValue() string {
 
 type ChatViewModel struct {
 	// Frame component
-	Frame
+	components.Frame
 
 	// Focusable component
-	*FocusContainer
+	*components.FocusContainer
 
 	// Components
-	chats       *ItemList
-	chatHistory *ChatHistory
-	chatInput   *ChatInput
+	chats       *components.ItemList
+	chatHistory *components.ChatHistory
+	chatInput   *components.ChatInput
 
 	// Stack
-	stack *Stack
+	stack *components.Stack
 
 	// Services
 	userManager *services.UserManager
@@ -60,26 +62,33 @@ func newChatViewModel(
 	chatManager *services.ChatManager,
 ) *ChatViewModel {
 	// Initialize chat list
-	chats := newItemList([]list.Item{})
+	chats := components.NewItemList([]list.Item{})
 	chats.Title = "Chats"
 
 	// Initialize chat history
-	chatHistory := newChatHistory("You", "TheOtherOne")
+	chatHistory := components.NewChatHistory("You", "TheOtherOne")
 
 	// Initialize chat input
-	chatInput := newChatInput()
+	chatInput := components.NewChatInput()
 	chatInput.Placeholder = "Type a message..."
 	chatInput.SetActive(true)
 	chatInput.SetWidth(20)
 
 	return &ChatViewModel{
-		Frame{},
-		&FocusContainer{[]FocusableModel{chatInput, chats, chatHistory}, 0},
+		components.Frame{},
+		components.NewFocusContainer([]components.FocusableModel{chatInput, chats, chatHistory}),
 
 		chats,
 		chatHistory,
 		chatInput,
-		newStack(Horizontal, 3, chats, newStackWithPosition(lipgloss.Left, Vertical, 2, chatHistory, chatInput)),
+		components.NewStack(
+			components.Horizontal, 3,
+			chats, components.NewStackWithPosition(
+				lipgloss.Left,
+				components.Vertical, 2,
+				chatHistory, chatInput,
+			),
+		),
 		userManager,
 		chatManager,
 		user,
@@ -102,7 +111,7 @@ func (m *ChatViewModel) syncComponentSizes() {
 	m.chats.SetSize(m.Frame.Width()/5, m.Frame.Height())
 
 	// TODO: validate the stack component [1]
-	gapHeight := lipgloss.Height(m.stack.Components()[1].(*Stack).Gap())
+	gapHeight := lipgloss.Height(m.stack.Components()[1].(*components.Stack).Gap())
 	gapWidth := lipgloss.Width(m.stack.Gap())
 	reminingWidth := m.Frame.Width() - m.chats.Width() - gapWidth
 	m.chatHistory.SetSize(reminingWidth, m.Frame.Height()-gapHeight-m.chatInput.Height())
@@ -119,10 +128,10 @@ func (m *ChatViewModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.syncComponentSizes()
-	case ChatInputMessageSentMsg:
+	case components.ChatInputMessageSentMsg:
 		currnetChat := m.chats.SelectedItem()
 		if currnetChat == nil {
-			cmds = append(cmds, Error("No chat selected"))
+			cmds = append(cmds, commands.Error("No chat selected"))
 		} else {
 			cmds = append(cmds, SendMessageToChat(currnetChat.(Chat).Id, msg.Message))
 		}
@@ -142,7 +151,7 @@ func (m *ChatViewModel) View() string {
 func (m *ChatViewModel) showAllChats() tea.Cmd {
 	chats, err := m.chatManager.GetChatsByUserId(m.user.Id)
 	if err != nil {
-		return Error(err.Error())
+		return commands.Error(err.Error())
 	}
 
 	chatItems := make([]list.Item, len(chats))
@@ -159,12 +168,12 @@ func (m *ChatViewModel) showChatHistory(chat Chat) tea.Cmd {
 
 	chatMessages, err := m.chatManager.GetChatMessagesByChatId(chat.Id)
 	if err != nil {
-		return Error(err.Error())
+		return commands.Error(err.Error())
 	}
 
-	chatMessageItems := make([]ChatMessage, len(chatMessages))
+	chatMessageItems := make([]components.ChatMessage, len(chatMessages))
 	for _, message := range chatMessages {
-		chatMessageItems = append(chatMessageItems, ChatMessage{
+		chatMessageItems = append(chatMessageItems, components.ChatMessage{
 			Member: message.Member,
 			Text:   message.Text,
 			At:     message.At,

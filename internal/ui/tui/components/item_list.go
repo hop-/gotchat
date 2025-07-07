@@ -1,4 +1,4 @@
-package tui
+package components
 
 import (
 	"github.com/charmbracelet/bubbles/list"
@@ -15,7 +15,7 @@ type ItemList struct {
 	onSelectAction ListOnAction
 }
 
-func newItemList(items []list.Item) *ItemList {
+func NewItemList(items []list.Item) *ItemList {
 	return &ItemList{
 		Model: list.New(items, list.NewDefaultDelegate(), 0, 0),
 		focus: true,
