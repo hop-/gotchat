@@ -23,7 +23,7 @@ func NewButton(text string) *Button {
 	return &Button{
 		text,
 		true,
-		false,
+		true,
 		focusedStyle.Render(buttonText),
 		fmt.Sprintf("[ %s ]", blurredStyle.Render(text)),
 		blurredStyle.Render(buttonText),

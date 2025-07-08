@@ -61,7 +61,7 @@ func newUsersListModel(
 
 	return &UsersListModel{
 		components.Frame{},
-		components.NewFocusContainer([]components.FocusableModel{l, newLoginButton, exitButton}),
+		components.NewFocusContainer(l, newLoginButton, exitButton),
 		l,
 		components.NewStack(
 			components.Vertical, 2,

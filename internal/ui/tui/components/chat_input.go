@@ -1,6 +1,8 @@
 package components
 
 import (
+	"strings"
+
 	"github.com/charmbracelet/bubbles/textarea"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -51,8 +53,16 @@ func (ci *ChatInput) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg.String() {
 		case "enter":
 			if ci.Model.Value() != "" {
-				// Send the message
-				cmds = append(cmds, ChatInputMessageSent(ci.Model.Value()))
+				// Remove the ending newline character if it exists
+				message := strings.TrimSuffix(ci.Model.Value(), "\n")
+				if message[0] == '/' {
+					// Handle chat command
+					cmdArgs := strings.Split(message[1:], " ")
+					cmds = append(cmds, chatCommandExecuted(cmdArgs[0], cmdArgs[1:]...))
+				} else {
+					// Send the message
+					cmds = append(cmds, ChatInputMessageSent(message))
+				}
 				// Reset the input field
 				ci.Model.Reset()
 			}

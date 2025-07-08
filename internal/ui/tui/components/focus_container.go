@@ -7,7 +7,7 @@ type FocusContainer struct {
 	focusIndex int
 }
 
-func NewFocusContainer(items []FocusableModel) *FocusContainer {
+func NewFocusContainer(items ...FocusableModel) *FocusContainer {
 	return &FocusContainer{
 		items:      items,
 		focusIndex: 0,

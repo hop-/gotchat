@@ -71,7 +71,7 @@ func newSignupModel(
 
 	return &SignupModel{
 		components.Frame{},
-		components.NewFocusContainer([]components.FocusableModel{usernameInput, passwordInput, loginButton, backButton}),
+		components.NewFocusContainer(usernameInput, passwordInput, loginButton, backButton),
 		usernameInput,
 		passwordInput,
 		loginButton,

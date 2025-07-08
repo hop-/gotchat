@@ -41,9 +41,10 @@ type ChatViewModel struct {
 	*components.FocusContainer
 
 	// Components
-	chats       *components.ItemList
-	chatHistory *components.ChatHistory
-	chatInput   *components.ChatInput
+	chats               *components.ItemList
+	chatHistory         *components.ChatHistory
+	chatInput           *components.ChatInput
+	newConnectionButton *components.Button
 
 	// Stack
 	stack *components.Stack
@@ -74,20 +75,19 @@ func newChatViewModel(
 	chatInput.SetActive(true)
 	chatInput.SetWidth(20)
 
+	newConnectionButton := components.NewButton("New Connection")
+
 	return &ChatViewModel{
 		components.Frame{},
-		components.NewFocusContainer([]components.FocusableModel{chatInput, chats, chatHistory}),
-
+		components.NewFocusContainer(chatInput, chats, newConnectionButton, chatHistory),
 		chats,
 		chatHistory,
 		chatInput,
+		newConnectionButton,
 		components.NewStack(
 			components.Horizontal, 3,
-			chats, components.NewStackWithPosition(
-				lipgloss.Left,
-				components.Vertical, 2,
-				chatHistory, chatInput,
-			),
+			components.NewStack(components.Vertical, 1, chats, newConnectionButton, components.NewLabel("")),
+			components.NewStack(components.Vertical, 2, chatHistory, chatInput),
 		),
 		userManager,
 		chatManager,
@@ -108,13 +108,14 @@ func (m *ChatViewModel) Init() tea.Cmd {
 }
 
 func (m *ChatViewModel) syncComponentSizes() {
-	m.chats.SetSize(m.Frame.Width()/5, m.Frame.Height())
+	gapHeight1 := lipgloss.Height(m.stack.Components()[0].(*components.Stack).Gap())
+	m.chats.SetSize(m.Frame.Width()/5, m.Frame.Height()-2*gapHeight1-2)
 
 	// TODO: validate the stack component [1]
-	gapHeight := lipgloss.Height(m.stack.Components()[1].(*components.Stack).Gap())
+	gapHeight2 := lipgloss.Height(m.stack.Components()[1].(*components.Stack).Gap())
 	gapWidth := lipgloss.Width(m.stack.Gap())
 	reminingWidth := m.Frame.Width() - m.chats.Width() - gapWidth
-	m.chatHistory.SetSize(reminingWidth, m.Frame.Height()-gapHeight-m.chatInput.Height())
+	m.chatHistory.SetSize(reminingWidth, m.Frame.Height()-gapHeight2-m.chatInput.Height())
 
 	m.chatInput.SetWidth(reminingWidth)
 }

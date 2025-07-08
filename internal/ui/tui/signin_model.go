@@ -64,7 +64,7 @@ func newSigninModel(
 
 	return &SigninModel{
 		components.Frame{},
-		components.NewFocusContainer([]components.FocusableModel{passwordInput, loginButton, backButton}),
+		components.NewFocusContainer(passwordInput, loginButton, backButton),
 
 		usernameLabel,
 		passwordInput,
