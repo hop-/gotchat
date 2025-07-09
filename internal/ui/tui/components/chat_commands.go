@@ -20,7 +20,7 @@ func init() {
 
 	// Add the exit command
 	exitCommand := func(args ...string) tea.Cmd {
-		return commands.InternalQuit
+		return commands.Shutdown
 	}
 	chatCommands["exit"] = exitCommand
 	chatCommands["quit"] = exitCommand
@@ -65,7 +65,7 @@ func chatCommandExecuted(name string, args ...string) tea.Cmd {
 }
 
 func AddChatCommand(name string, command ChatCommand) error {
-	// CHeck a chat command by name
+	// Check a chat command by name
 	if _, exists := chatCommands[name]; exists {
 		return fmt.Errorf("chat command '%s' already exists", name)
 	}

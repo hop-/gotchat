@@ -63,6 +63,11 @@ func (m *RootModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		} else {
 			return m, commands.Shutdown
 		}
+	case commands.ConnectMsg:
+		m.emitter.Emit(core.ConnectEvent{
+			Host: msg.Host,
+			Port: msg.Port,
+		})
 	case commands.ShutdownMsg:
 		// Setup shutdown screen
 		m.pageStack = []tea.Model{newShutdownModel()}

@@ -8,3 +8,8 @@ type NewMessageEvent struct {
 	Message string
 	// TODO: Add more fields as needed
 }
+
+type ConnectEvent struct {
+	Host string
+	Port string
+}

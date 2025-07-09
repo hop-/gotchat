@@ -54,7 +54,12 @@ func (ci *ChatInput) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "enter":
 			if ci.Model.Value() != "" {
 				// Remove the ending newline character if it exists
-				message := strings.TrimSuffix(ci.Model.Value(), "\n")
+				message := strings.TrimSpace(strings.TrimSuffix(ci.Model.Value(), "\n"))
+				ci.Model.Reset()
+				if message == "" {
+					// Ignore empty messages
+					break
+				}
 				if message[0] == '/' {
 					// Handle chat command
 					cmdArgs := strings.Split(message[1:], " ")
@@ -64,7 +69,6 @@ func (ci *ChatInput) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					cmds = append(cmds, ChatInputMessageSent(message))
 				}
 				// Reset the input field
-				ci.Model.Reset()
 			}
 		}
 	}

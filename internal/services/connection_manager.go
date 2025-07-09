@@ -60,7 +60,10 @@ func NewConnectionManager(eventManager *core.EventManager, server *Server) *Conn
 // Init implements core.Service.
 func (cm *ConnectionManager) Init() error {
 	if cm.server != nil {
-		cm.server.Init()
+		err := cm.server.Init()
+		if err != nil {
+			return fmt.Errorf("failed to initialize server: %w", err)
+		}
 	}
 
 	return nil
@@ -111,6 +114,7 @@ func (cm *ConnectionManager) Close() error {
 }
 
 func (cm *ConnectionManager) Connect(address string) (string, error) {
+	log.Printf("Connecting to %s\n", address)
 	client := NewClient(address)
 	conn, err := client.Connect()
 	if err != nil {
@@ -118,6 +122,7 @@ func (cm *ConnectionManager) Connect(address string) (string, error) {
 
 		return "", err
 	}
+	log.Println("Connected successfully")
 
 	connId := cm.addConnection(conn)
 	go cm.handleConnection(connId, conn)
@@ -168,8 +173,11 @@ func (cm *ConnectionManager) handleApplicationEvents(
 				continue
 			}
 
-			switch e.(type) {
-			// TODO: Handle specific events
+			switch e := e.(type) {
+			case core.ConnectEvent:
+				address := fmt.Sprintf("%s:%s", e.Host, e.Port)
+				cm.Connect(address)
+				// TODO: utilize the returned connection ID
 			}
 		}
 	}
@@ -179,7 +187,7 @@ func (cm *ConnectionManager) runServer(ctx context.Context, wg *sync.WaitGroup) 
 	wg.Add(1)
 	defer wg.Done()
 
-	for cm.isRunning() {
+	for cm.isRunning() && cm.server.IsInitialized() {
 		select {
 		case <-ctx.Done():
 			// Context is done, stop the connection manager
@@ -244,9 +252,14 @@ func (s *Server) Init() error {
 		return err
 	}
 
+	log.Println("Server started successfully")
 	s.listener = listener
 
 	return nil
+}
+
+func (s *Server) IsInitialized() bool {
+	return s.listener != nil
 }
 
 func (s *Server) Accept() (*network.Conn, error) {
