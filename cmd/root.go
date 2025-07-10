@@ -45,6 +45,7 @@ func Execute() {
 	log.Configure().
 		InMemory().
 		StdOut().
+		Level(log.DEBUG). // TODO: set log level from config
 		Init()
 	defer log.Close()
 

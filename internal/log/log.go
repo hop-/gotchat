@@ -9,6 +9,15 @@ import (
 var (
 	logInstance   *logger
 	isInitialized bool = false
+	level              = INFO // Default log level
+)
+
+const (
+	FATAL = iota
+	ERROR
+	WARN
+	INFO
+	DEBUG
 )
 
 type logger struct {
@@ -42,43 +51,43 @@ func printLog(typeStr string, format string, args ...any) {
 }
 
 func Infof(format string, args ...any) {
-	if !isInitialized {
+	if !isInitialized || level < INFO {
 		return
 	}
 
-	printLog("Info ", format, args...)
+	printLog("INFO ", format, args...)
 }
 
 func Warnf(format string, args ...any) {
-	if !isInitialized {
+	if !isInitialized || level < WARN {
 		return
 	}
 
-	printLog("Warn ", format, args...)
+	printLog("WARN ", format, args...)
 }
 
 func Errorf(format string, args ...any) {
-	if !isInitialized {
+	if !isInitialized || level < ERROR {
 		return
 	}
 
-	printLog("Error", format, args...)
+	printLog("ERROR", format, args...)
 }
 
 func Debugf(format string, args ...any) {
-	if !isInitialized {
+	if !isInitialized || level < DEBUG {
 		return
 	}
 
-	printLog("Debug", format, args...)
+	printLog("DEBUG", format, args...)
 }
 
 func Fatalf(format string, args ...any) {
-	if !isInitialized {
+	if !isInitialized || level < FATAL {
 		return
 	}
 
-	printLog("Fatal", format, args...)
+	printLog("FATAL", format, args...)
 
 	// Exit the program after logging fatal error
 	panic("Fatal error occurred, exiting program")

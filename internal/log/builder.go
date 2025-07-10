@@ -4,11 +4,13 @@ import "os"
 
 type LogBuilder struct {
 	logInstance *logger
+	level       int
 }
 
 func Configure() *LogBuilder {
 	return &LogBuilder{
 		&logger{},
+		INFO, // Default log level
 	}
 }
 
@@ -19,6 +21,7 @@ func (b *LogBuilder) Init() error {
 	}
 
 	logInstance = b.logInstance
+	level = b.level
 	isInitialized = true
 
 	return nil
@@ -26,11 +29,13 @@ func (b *LogBuilder) Init() error {
 
 func (b *LogBuilder) InMemory() *LogBuilder {
 	b.logInstance.inMemory = true
+
 	return b
 }
 
 func (b *LogBuilder) StdOut() *LogBuilder {
 	b.logInstance.stdOut = true
+
 	return b
 }
 
@@ -40,6 +45,15 @@ func (b *LogBuilder) File(filePath string) *LogBuilder {
 	if err != nil {
 		return nil
 	}
+
+	return b
+}
+
+func (b *LogBuilder) Level(l int) *LogBuilder {
+	if l < FATAL || l > DEBUG {
+		return nil // Invalid log level
+	}
+	b.level = l
 
 	return b
 }
