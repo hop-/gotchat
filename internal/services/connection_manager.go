@@ -3,10 +3,10 @@ package services
 import (
 	"context"
 	"fmt"
-	"log"
 	"sync"
 
 	"github.com/hop-/gotchat/internal/core"
+	"github.com/hop-/gotchat/internal/log"
 	"github.com/hop-/gotchat/internal/network"
 )
 
@@ -77,7 +77,8 @@ func (cm *ConnectionManager) Name() string {
 // Run implements core.Service.
 func (cm *ConnectionManager) Run(ctx context.Context, wg *sync.WaitGroup) {
 	if cm.isRunning() {
-		log.Println("ConnectionManager is already running")
+		log.Errorf("ConnectionManager is already running")
+
 		return
 	}
 
@@ -87,7 +88,7 @@ func (cm *ConnectionManager) Run(ctx context.Context, wg *sync.WaitGroup) {
 
 	// If no server is configured, run in client-only mode
 	if cm.server == nil {
-		log.Println("No server configured, running in client-only mode")
+		log.Infof("No server configured, running in client-only mode")
 		cm.handleApplicationEvents(ctx, wg, listener)
 
 		return
@@ -106,7 +107,7 @@ func (cm *ConnectionManager) Close() error {
 
 	for _, conn := range cm.connections {
 		if err := conn.Close(); err != nil {
-			log.Printf("failed to close connection: %v\n", err)
+			log.Errorf("Failed to close connection: %v", err)
 		}
 	}
 
@@ -114,7 +115,7 @@ func (cm *ConnectionManager) Close() error {
 }
 
 func (cm *ConnectionManager) Connect(address string) (string, error) {
-	log.Printf("Connecting to %s\n", address)
+	log.Infof("Connecting to %s", address)
 	client := NewClient(address)
 	conn, err := client.Connect()
 	if err != nil {
@@ -122,7 +123,7 @@ func (cm *ConnectionManager) Connect(address string) (string, error) {
 
 		return "", err
 	}
-	log.Println("Connected successfully")
+	log.Infof("Connected successfully")
 
 	connId := cm.addConnection(conn)
 	go cm.handleConnection(connId, conn)
@@ -169,7 +170,7 @@ func (cm *ConnectionManager) handleApplicationEvents(
 		default:
 			e, err := listener.Next(ctx)
 			if err != nil {
-				log.Printf("failed to get next event: %v\n", err)
+				log.Errorf("Failed to get next event: %v", err)
 				continue
 			}
 
@@ -195,7 +196,7 @@ func (cm *ConnectionManager) runServer(ctx context.Context, wg *sync.WaitGroup) 
 		default:
 			conn, err := cm.server.Accept()
 			if err != nil {
-				log.Printf("failed to accept connection: %v\n", err)
+				log.Errorf("Failed to accept connection: %v", err)
 				cm.emitEvent(ConnectionAcceptError{err})
 
 				continue
@@ -246,13 +247,13 @@ func (s *Server) Init() error {
 	}
 	t := network.NewTcpTransport()
 
-	log.Printf("Starting server on %s\n", s.address)
+	log.Infof("Starting server on %s", s.address)
 	listener, err := t.Listen(s.address)
 	if err != nil {
 		return err
 	}
 
-	log.Println("Server started successfully")
+	log.Infof("Server started successfully")
 	s.listener = listener
 
 	return nil
@@ -297,12 +298,12 @@ func NewClient(address string) *Client {
 func (c *Client) Connect() (*network.Conn, error) {
 	t := network.NewTcpTransport()
 
-	log.Printf("Connecting to server at %s\n", c.address)
+	log.Infof("Connecting to server at %s", c.address)
 	conn, err := t.Connect(c.address)
 	if err != nil {
 		return nil, err
 	}
-	log.Printf("Connected\n")
+	log.Infof("Connected")
 
 	return conn, nil
 }

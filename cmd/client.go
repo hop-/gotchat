@@ -1,10 +1,9 @@
 package cmd
 
 import (
-	"log"
-
 	"github.com/hop-/gotchat/internal/app"
 	"github.com/hop-/gotchat/internal/config"
+	"github.com/hop-/gotchat/internal/log"
 	"github.com/hop-/gotchat/internal/services"
 	"github.com/hop-/gotchat/internal/storage"
 	"github.com/hop-/gotchat/internal/ui/tui"
@@ -38,7 +37,7 @@ func executeClient() {
 
 	err := application.Init()
 	if err != nil {
-		log.Fatal("error:", err)
+		log.Fatalf("Failed to initialize application: %v", err)
 	}
 
 	application.Run()

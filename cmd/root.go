@@ -1,10 +1,10 @@
 package cmd
 
 import (
-	"log"
 	"os"
 
 	"github.com/hop-/gotchat/internal/config"
+	"github.com/hop-/gotchat/internal/log"
 	"github.com/spf13/cobra"
 )
 
@@ -42,11 +42,18 @@ func init() {
 }
 
 func Execute() {
+	log.Configure().
+		InMemory().
+		StdOut().
+		Init()
+	defer log.Close()
+
 	err := createRootDirIfNotExists()
 	if err != nil {
 		log.Fatalf("Failed to create root directory: %v", err)
 	}
 	cobra.CheckErr(rootCmd.Execute())
+
 }
 
 func createRootDirIfNotExists() error {

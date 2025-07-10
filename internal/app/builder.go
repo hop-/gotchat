@@ -1,9 +1,8 @@
 package app
 
 import (
-	"log"
-
 	"github.com/hop-/gotchat/internal/core"
+	"github.com/hop-/gotchat/internal/log"
 	"github.com/hop-/gotchat/internal/ui"
 )
 
@@ -48,7 +47,7 @@ func (b *Builder) Build() *App {
 	}
 
 	if b.em == nil || b.ui == nil {
-		log.Fatal("EventManager and UI must be set")
+		log.Fatalf("EventManager and UI must be set")
 	}
 
 	return &App{
