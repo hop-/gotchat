@@ -3,7 +3,6 @@ package tui
 import (
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/hop-/gotchat/internal/core"
 	"github.com/hop-/gotchat/internal/services"
 	"github.com/hop-/gotchat/internal/ui/tui/commands"
 	"github.com/hop-/gotchat/internal/ui/tui/components"
@@ -49,17 +48,15 @@ func newSignupModel(
 	loginButton := components.NewButton("Login")
 	loginButton.SetActive(false)
 	loginButton.OnAction(func() tea.Msg {
-		passwordHash, err := core.HashPassword(passwordInput.Value())
+		user, err := userManager.CreateUser(usernameInput.Value(), passwordInput.Value())
 		if err != nil {
 			// TODO: handle error properly
-			return nil
+			return commands.ErrorMsg{Message: "An error occurred while creating the user"}
 		}
 
-		user := core.NewUser(usernameInput.Value(), passwordHash)
-		err = userManager.CreateUser(user)
+		user, err = userManager.LoginUser(user, passwordInput.Value())
 		if err != nil {
-			// TODO: handle error properly
-			return nil
+			return commands.ErrorMsg{Message: "An error occurred while logging in"}
 		}
 
 		return commands.SetNewPageMsg{Page: newChatViewModel(user, userManager, chatManager)}

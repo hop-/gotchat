@@ -1,8 +1,6 @@
 package tui
 
 import (
-	"time"
-
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/hop-/gotchat/internal/core"
@@ -48,14 +46,17 @@ func newSigninModel(
 	loginButton := components.NewButton("Login")
 	loginButton.SetActive(false)
 	loginButton.OnAction(func() tea.Msg {
-		if core.CheckPasswordHash(passwordInput.Value(), user.Password) {
-			user.LastLogin = time.Now()
-			userManager.UpdateUser(user)
+		user, err := userManager.LoginUser(user, passwordInput.Value())
+		if err != nil {
+			switch err {
+			case services.ErrorInvalidInput, services.ErrorInvalidCredentials:
+				return commands.ErrorMsg{Message: "Invalid credentials"}
+			}
 
-			return commands.SetNewPageMsg{Page: newChatViewModel(user, userManager, chatManager)}
+			return commands.ErrorMsg{Message: "An error occurred while logging in"}
 		}
 
-		return commands.ErrorMsg{Message: "Invalid password"}
+		return commands.SetNewPageMsg{Page: newChatViewModel(user, userManager, chatManager)}
 	})
 
 	backButton := components.NewButton("Back")

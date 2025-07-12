@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"sync"
+	"time"
 
 	"github.com/hop-/gotchat/internal/core"
 )
@@ -80,36 +81,60 @@ func (u *UserManager) UpdateUser(user *core.User) error {
 		return err
 	}
 
-	// TODO: Emit an event for user update
+	u.em.Emit(core.UserUpdatedEvent{
+		User: user,
+	})
 
 	return nil
 }
 
-func (u *UserManager) CreateUser(user *core.User) error {
-	if user == nil {
-		return ErrorInvalidInput
+func (u *UserManager) CreateUser(name string, password string) (*core.User, error) {
+	if name == "" || password == "" {
+		return nil, ErrorInvalidInput
 	}
 
-	if user.UniqueId == "" {
-		return ErrorInvalidInput
+	passwordHash, err := core.HashPassword(password)
+	if err != nil {
+		return nil, err
 	}
 
-	if user.Password == "" {
-		return ErrorInvalidInput
-	}
-
+	user := core.NewUser(name, passwordHash)
 	if err := u.userRepo.Create(user); err != nil {
-		return err
+		return nil, err
 	}
 
-	// TODO: Emit an event for user creation
-	return nil
+	u.em.Emit(core.UserCreatedEvent{
+		User: user,
+	})
+
+	return user, nil
 }
 
-func (u *UserManager) CheckPasswordByUser(user *core.User, password string) bool {
+func (u *UserManager) checkPasswordByUser(user *core.User, password string) bool {
 	if user == nil {
 		return false
 	}
 
 	return core.CheckPasswordHash(password, user.Password)
+}
+
+func (u *UserManager) LoginUser(user *core.User, password string) (*core.User, error) {
+	if user == nil {
+		return nil, ErrorInvalidInput
+	}
+
+	if !u.checkPasswordByUser(user, password) {
+		return nil, ErrorInvalidCredentials
+	}
+
+	user.LastLogin = time.Now()
+	if err := u.UpdateUser(user); err != nil {
+		return nil, err
+	}
+
+	u.em.Emit(core.UserLoggedInEvent{
+		User: user,
+	})
+
+	return user, nil
 }

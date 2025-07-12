@@ -13,3 +13,19 @@ type ConnectEvent struct {
 	Host string
 	Port string
 }
+
+type UserCreatedEvent struct {
+	User *User
+}
+
+type UserLoggedInEvent struct {
+	User *User
+}
+
+type UserLoggedOutEvent struct {
+	User *User
+}
+
+type UserUpdatedEvent struct {
+	User *User
+}
