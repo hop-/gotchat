@@ -41,19 +41,19 @@ type MessageReadError struct {
 // ConnectionManager Service
 type ConnectionManager struct {
 	AtomicRunningStatus
-	connections  map[string]network.Conn
-	mu           sync.RWMutex
 	eventManager *core.EventManager
 	server       *Server
+
+	// User controller
+	userController *UserController
 }
 
 func NewConnectionManager(eventManager *core.EventManager, server *Server) *ConnectionManager {
 	return &ConnectionManager{
 		AtomicRunningStatus{},
-		make(map[string]network.Conn),
-		sync.RWMutex{},
 		eventManager,
 		server,
+		nil,
 	}
 }
 
@@ -105,9 +105,9 @@ func (cm *ConnectionManager) Close() error {
 		cm.server.Close()
 	}
 
-	for _, conn := range cm.connections {
-		if err := conn.Close(); err != nil {
-			log.Errorf("Failed to close connection: %v", err)
+	if cm.userController != nil {
+		if err := cm.userController.Close(); err != nil {
+			log.Errorf("Failed to close user controller: %v", err)
 		}
 	}
 
@@ -115,6 +115,11 @@ func (cm *ConnectionManager) Close() error {
 }
 
 func (cm *ConnectionManager) Connect(address string) (string, error) {
+	if !cm.isRunning() || cm.userController == nil {
+		log.Errorf("ConnectionManager is not running or user controller is not initialized")
+
+		return "", fmt.Errorf("connection manager is not running or user controller is not initialized")
+	}
 	log.Infof("Connecting to %s", address)
 	client := NewClient(address)
 	conn, err := client.Connect()
@@ -125,34 +130,18 @@ func (cm *ConnectionManager) Connect(address string) (string, error) {
 	}
 	log.Infof("Connected successfully")
 
-	connId := cm.addConnection(conn)
-	go cm.handleConnection(connId, conn)
+	if cm.userController == nil {
+		conn.Close()
+
+		return "", fmt.Errorf("user controller is not initialized")
+	}
+	connId := cm.userController.Register(conn)
 
 	return connId, nil
 }
 
 func (cm *ConnectionManager) emitEvent(event core.Event) {
 	cm.eventManager.Emit(event)
-}
-
-func (cm *ConnectionManager) addConnection(conn *network.Conn) string {
-	cm.mu.Lock()
-	defer cm.mu.Unlock()
-	id := generateUuid()
-	cm.connections[id] = *conn
-
-	cm.emitEvent(NewConnection{id, conn})
-
-	return id
-}
-
-func (cm *ConnectionManager) removeConnection(id string) {
-	cm.mu.Lock()
-	defer cm.mu.Unlock()
-
-	delete(cm.connections, id)
-
-	cm.emitEvent(ConnectionClosed{id})
 }
 
 func (cm *ConnectionManager) handleApplicationEvents(
@@ -179,6 +168,25 @@ func (cm *ConnectionManager) handleApplicationEvents(
 				address := fmt.Sprintf("%s:%s", e.Host, e.Port)
 				cm.Connect(address)
 				// TODO: utilize the returned connection ID
+			case core.UserLoggedInEvent:
+				if cm.userController != nil {
+					log.Warnf("UserController is already initialized, removing previous user controller")
+					if err := cm.userController.Close(); err != nil {
+						log.Errorf("Failed to close previous user controller: %v", err)
+					}
+				}
+				cm.userController = NewUserController(cm.eventManager, e.User)
+				log.Infof("UserController initialized for user %s", e.User.Name)
+			case core.UserLoggedOutEvent:
+				if cm.userController != nil {
+					log.Infof("UserController is closing for user %s", cm.userController.user.Name)
+					if err := cm.userController.Close(); err != nil {
+						log.Errorf("Failed to close user controller: %v", err)
+					}
+					cm.userController = nil
+				} else {
+					log.Warnf("No UserController initialized, nothing to close")
+				}
 			}
 		}
 	}
@@ -202,28 +210,13 @@ func (cm *ConnectionManager) runServer(ctx context.Context, wg *sync.WaitGroup) 
 				continue
 			}
 
-			connId := cm.addConnection(conn)
-
-			go cm.handleConnection(connId, conn)
+			if cm.userController != nil {
+				cm.userController.Register(conn)
+			} else {
+				// TODO: Handle connection without user controller
+				conn.Close()
+			}
 		}
-	}
-}
-
-func (cm *ConnectionManager) handleConnection(connId string, conn *network.Conn) {
-	defer conn.Close()
-	defer cm.removeConnection(connId)
-
-	// TODO: Handle handshake or any initial setup for the connection
-
-	for cm.isRunning() {
-		m, err := conn.Read()
-		if err != nil {
-			cm.emitEvent(MessageReadError{connId, err})
-		}
-
-		// TODO: Handle the message and emit an event
-		_ = m
-		cm.emitEvent(NewMessage{connId})
 	}
 }
 
@@ -306,4 +299,85 @@ func (c *Client) Connect() (*network.Conn, error) {
 	log.Infof("Connected")
 
 	return conn, nil
+}
+
+// User Controller
+type UserController struct {
+	AtomicRunningStatus
+	user         *core.User
+	mu           sync.RWMutex
+	connections  map[string]network.Conn
+	eventManager *core.EventManager
+}
+
+func NewUserController(eventManager *core.EventManager, user *core.User) *UserController {
+	return &UserController{
+		AtomicRunningStatus{},
+		user,
+		sync.RWMutex{},
+		make(map[string]network.Conn),
+		eventManager,
+	}
+}
+
+func (uc *UserController) Register(conn *network.Conn) string {
+	log.Debugf("Registering new connection for user %s", uc.user.Name)
+	connId := uc.addConnection(conn)
+	go uc.handleConnection(connId, conn)
+
+	return connId
+}
+
+func (uc *UserController) Close() error {
+	uc.setRunningStatus(false)
+
+	for _, conn := range uc.connections {
+		if err := conn.Close(); err != nil {
+			log.Errorf("Failed to close connection: %v", err)
+		}
+	}
+
+	return nil
+}
+
+func (uc *UserController) emitEvent(event core.Event) {
+	uc.eventManager.Emit(event)
+}
+
+func (uc *UserController) addConnection(conn *network.Conn) string {
+	uc.mu.Lock()
+	defer uc.mu.Unlock()
+	id := generateUuid()
+	uc.connections[id] = *conn
+
+	uc.emitEvent(NewConnection{id, conn})
+
+	return id
+}
+
+func (uc *UserController) removeConnection(id string) {
+	uc.mu.Lock()
+	defer uc.mu.Unlock()
+
+	delete(uc.connections, id)
+
+	uc.emitEvent(ConnectionClosed{id})
+}
+
+func (uc *UserController) handleConnection(connId string, conn *network.Conn) {
+	defer conn.Close()
+	defer uc.removeConnection(connId)
+
+	// TODO: Handle handshake or any initial setup for the connection
+
+	for uc.isRunning() {
+		m, err := conn.Read()
+		if err != nil {
+			uc.emitEvent(MessageReadError{connId, err})
+		}
+
+		// TODO: Handle the message and emit an event
+		_ = m
+		uc.emitEvent(NewMessage{connId})
+	}
 }
