@@ -20,19 +20,30 @@ const (
 	DEBUG
 )
 
+type fmtFunc func(string, string, ...any) string
+
 type logger struct {
-	logFile  *os.File
-	inMemory bool
-	stdOut   bool
-	logStrs  []string
+	logFile            *os.File
+	inMemory           bool
+	stdOut             bool
+	logStrs            []string
+	formatLogMessageFn fmtFunc
 }
 
 func (l *logger) init() error {
 	return nil
 }
 
+func formatLogMessageWithTime(typeStr string, format string, args ...any) string {
+	return fmt.Sprintf("%s [%s]: ", typeStr, time.Now().Format("2006-01-02 15:04:05.000")) + fmt.Sprintf(format, args...)
+}
+
+func formatLogMessageWithoutTime(typeStr string, format string, args ...any) string {
+	return typeStr + ": " + fmt.Sprintf(format, args...)
+}
+
 func printLog(typeStr string, format string, args ...any) {
-	logStr := fmt.Sprintf("%s [%s]: ", typeStr, time.Now().Format("2006-01-02 15:04:05.000")) + fmt.Sprintf(format, args...)
+	logStr := logInstance.formatLogMessageFn(typeStr, format, args...)
 
 	// add newline at the end if not already present
 	if len(logStr) > 0 && logStr[len(logStr)-1] != '\n' {

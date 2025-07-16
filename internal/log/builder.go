@@ -9,7 +9,7 @@ type LogBuilder struct {
 
 func Configure() *LogBuilder {
 	return &LogBuilder{
-		&logger{},
+		&logger{formatLogMessageFn: formatLogMessageWithTime},
 		INFO, // Default log level
 	}
 }
@@ -54,6 +54,18 @@ func (b *LogBuilder) Level(l int) *LogBuilder {
 		return nil // Invalid log level
 	}
 	b.level = l
+
+	return b
+}
+
+func (b *LogBuilder) WithTimestamps() *LogBuilder {
+	b.logInstance.formatLogMessageFn = formatLogMessageWithTime
+
+	return b
+}
+
+func (b *LogBuilder) WithoutTimestamps() *LogBuilder {
+	b.logInstance.formatLogMessageFn = formatLogMessageWithoutTime
 
 	return b
 }
