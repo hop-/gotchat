@@ -30,8 +30,7 @@ func init() {
 	)
 	rootCmd.Flags().StringVarP(
 		&generalDataStorageFile,
-		"storage",
-		"s",
+		"storage", "s",
 		config.GetDataStorageFilePath(),
 		"file to store chat data and configurations",
 	)

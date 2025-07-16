@@ -120,7 +120,6 @@ func (cm *ConnectionManager) Connect(address string) (string, error) {
 
 		return "", fmt.Errorf("connection manager is not running or user controller is not initialized")
 	}
-	log.Infof("Connecting to %s", address)
 	client := NewClient(address)
 	conn, err := client.Connect()
 	if err != nil {
@@ -128,7 +127,6 @@ func (cm *ConnectionManager) Connect(address string) (string, error) {
 
 		return "", err
 	}
-	log.Infof("Connected successfully")
 
 	if cm.userController == nil {
 		conn.Close()
@@ -291,12 +289,12 @@ func NewClient(address string) *Client {
 func (c *Client) Connect() (*network.Conn, error) {
 	t := network.NewTcpTransport()
 
-	log.Infof("Connecting to server at %s", c.address)
+	log.Infof("Connecting to %s", c.address)
 	conn, err := t.Connect(c.address)
 	if err != nil {
 		return nil, err
 	}
-	log.Infof("Connected")
+	log.Infof("Connected scuccessfully to %s", c.address)
 
 	return conn, nil
 }

@@ -3,6 +3,7 @@ package log
 import (
 	"fmt"
 	"os"
+	"sync"
 	"time"
 )
 
@@ -23,6 +24,7 @@ const (
 type fmtFunc func(string, string, ...any) string
 
 type logger struct {
+	mx                 sync.Mutex
 	logFile            *os.File
 	inMemory           bool
 	stdOut             bool
@@ -51,11 +53,17 @@ func printLog(typeStr string, format string, args ...any) {
 	}
 
 	if logInstance.inMemory {
+		logInstance.mx.Lock()
+		defer logInstance.mx.Unlock()
+
 		logInstance.logStrs = append(logInstance.logStrs, logStr)
 	} else if logInstance.stdOut {
 		fmt.Print(logStr)
 	}
 	if logInstance.logFile != nil {
+		logInstance.mx.Lock()
+		defer logInstance.mx.Unlock()
+
 		// Ignore error for simplicity
 		logInstance.logFile.WriteString(logStr)
 	}
