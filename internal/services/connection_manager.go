@@ -212,6 +212,8 @@ func (cm *ConnectionManager) runServer(ctx context.Context, wg *sync.WaitGroup) 
 				cm.userController.Register(conn)
 			} else {
 				// TODO: Handle connection without user controller
+				log.Infof("No UserController initialized, closing connection")
+
 				conn.Close()
 			}
 		}
@@ -377,7 +379,7 @@ func (uc *UserController) handleConnection(connId string, conn *network.Conn) {
 				log.Infof("Connection %s closed", connId)
 				uc.emitEvent(ConnectionClosed{connId})
 
-				// Exit the loop if the connection is closed
+				// Exit the loop
 				break
 			}
 
