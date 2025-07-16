@@ -2,6 +2,10 @@ package network
 
 import (
 	"encoding/binary"
+	"errors"
+	"io"
+	"net"
+	"syscall"
 )
 
 type BasicConn interface {
@@ -113,4 +117,16 @@ func (c *Conn) writeAll(b []byte) error {
 	}
 
 	return nil
+}
+
+func IsClosedError(err error) bool {
+	switch {
+	case
+		errors.Is(err, net.ErrClosed),
+		errors.Is(err, io.EOF),
+		errors.Is(err, syscall.EPIPE):
+		return true
+	default:
+		return false
+	}
 }

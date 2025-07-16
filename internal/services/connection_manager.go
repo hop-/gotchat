@@ -365,6 +365,7 @@ func (uc *UserController) removeConnection(id string) {
 }
 
 func (uc *UserController) handleConnection(connId string, conn *network.Conn) {
+	// Ensure the connection is closed and removed when done
 	defer conn.Close()
 	defer uc.removeConnection(connId)
 
@@ -373,6 +374,15 @@ func (uc *UserController) handleConnection(connId string, conn *network.Conn) {
 	for uc.isRunning() {
 		m, err := conn.Read()
 		if err != nil {
+			// Handle connection close
+			if network.IsClosedError(err) {
+				log.Infof("Connection %s closed", connId)
+				uc.emitEvent(ConnectionClosed{connId})
+
+				// Exit the loop if the connection is closed
+				break
+			}
+
 			uc.emitEvent(MessageReadError{connId, err})
 		}
 
