@@ -21,8 +21,6 @@ type ChatMessage struct {
 }
 
 type ChatManager struct {
-	em *core.EventManager
-
 	// Services
 	userManager *UserManager
 
@@ -33,14 +31,12 @@ type ChatManager struct {
 }
 
 func NewChatManager(
-	em *core.EventManager,
 	userManager *UserManager,
 	channelRepo core.Repository[core.Channel],
 	attendanceRepo core.Repository[core.Attendance],
 	messageRepo core.Repository[core.Message],
 ) *ChatManager {
 	return &ChatManager{
-		em,
 		userManager,
 		channelRepo,
 		attendanceRepo,
@@ -64,6 +60,11 @@ func (cm *ChatManager) Run(ctx context.Context, wg *sync.WaitGroup) {
 
 // Close implements core.Service.
 func (cm *ChatManager) Close() error {
+	return nil
+}
+
+func (cm *ChatManager) MapEventToCommands(event core.Event) []core.Command {
+	// TODO
 	return nil
 }
 

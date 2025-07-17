@@ -50,6 +50,11 @@ func (s *Storage) Run(ctx context.Context, wg *sync.WaitGroup) {
 	<-ctx.Done()
 }
 
+func (s *Storage) MapEventToCommands(event core.Event) []core.Command {
+	// This method is not used in the Storage service, so we return an empty slice.
+	return nil
+}
+
 func (s *Storage) Close() error {
 	if s.db == nil {
 		return nil

@@ -41,17 +41,17 @@ type MessageReadError struct {
 // ConnectionManager Service
 type ConnectionManager struct {
 	AtomicRunningStatus
-	eventManager *core.EventManager
+	eventEmitter core.EventEmitter
 	server       *Server
 
 	// User controller
 	userController *UserController
 }
 
-func NewConnectionManager(eventManager *core.EventManager, server *Server) *ConnectionManager {
+func NewConnectionManager(eventEmitter core.EventEmitter, server *Server) *ConnectionManager {
 	return &ConnectionManager{
 		AtomicRunningStatus{},
-		eventManager,
+		eventEmitter,
 		server,
 		nil,
 	}
@@ -82,19 +82,15 @@ func (cm *ConnectionManager) Run(ctx context.Context, wg *sync.WaitGroup) {
 		return
 	}
 
-	listener := cm.eventManager.Register(ctx)
-
 	cm.setRunningStatus(true)
 
 	// If no server is configured, run in client-only mode
 	if cm.server == nil {
 		log.Infof("No server configured, running in client-only mode")
-		cm.handleApplicationEvents(ctx, wg, listener)
 
 		return
 	}
 
-	go cm.handleApplicationEvents(ctx, wg, listener)
 	cm.runServer(ctx, wg)
 }
 
@@ -112,6 +108,22 @@ func (cm *ConnectionManager) Close() error {
 	}
 
 	return nil
+}
+
+func (cm *ConnectionManager) MapEventToCommands(event core.Event) []core.Command {
+	commands := make([]core.Command, 0)
+	switch e := event.(type) {
+	case core.ConnectEvent:
+		address := fmt.Sprintf("%s:%s", e.Host, e.Port)
+		commands = append(commands, &Connect{cm, address})
+		// TODO: utilize the returned connection ID
+	case core.UserLoggedInEvent:
+		commands = append(commands, &ChangeUserController{cm, e.User})
+	case core.UserLoggedOutEvent:
+		commands = append(commands, &RemoveUserController{cm})
+	}
+
+	return commands
 }
 
 func (cm *ConnectionManager) Connect(address string) (string, error) {
@@ -139,55 +151,7 @@ func (cm *ConnectionManager) Connect(address string) (string, error) {
 }
 
 func (cm *ConnectionManager) emitEvent(event core.Event) {
-	cm.eventManager.Emit(event)
-}
-
-func (cm *ConnectionManager) handleApplicationEvents(
-	ctx context.Context,
-	wg *sync.WaitGroup,
-	listener core.EventListener,
-) {
-	wg.Add(1)
-	defer wg.Done()
-
-	for cm.isRunning() {
-		select {
-		case <-ctx.Done():
-			cm.setRunningStatus(false)
-		default:
-			e, err := listener.Next(ctx)
-			if err != nil {
-				log.Errorf("Failed to get next event: %v", err)
-				continue
-			}
-
-			switch e := e.(type) {
-			case core.ConnectEvent:
-				address := fmt.Sprintf("%s:%s", e.Host, e.Port)
-				cm.Connect(address)
-				// TODO: utilize the returned connection ID
-			case core.UserLoggedInEvent:
-				if cm.userController != nil {
-					log.Warnf("UserController is already initialized, removing previous user controller")
-					if err := cm.userController.Close(); err != nil {
-						log.Errorf("Failed to close previous user controller: %v", err)
-					}
-				}
-				cm.userController = NewUserController(cm.eventManager, e.User)
-				log.Infof("UserController initialized for user %s", e.User.Name)
-			case core.UserLoggedOutEvent:
-				if cm.userController != nil {
-					log.Infof("UserController is closing for user %s", cm.userController.user.Name)
-					if err := cm.userController.Close(); err != nil {
-						log.Errorf("Failed to close user controller: %v", err)
-					}
-					cm.userController = nil
-				} else {
-					log.Warnf("No UserController initialized, nothing to close")
-				}
-			}
-		}
-	}
+	cm.eventEmitter.Emit(event)
 }
 
 func (cm *ConnectionManager) runServer(ctx context.Context, wg *sync.WaitGroup) {
@@ -217,6 +181,29 @@ func (cm *ConnectionManager) runServer(ctx context.Context, wg *sync.WaitGroup) 
 				conn.Close()
 			}
 		}
+	}
+}
+
+func (cm *ConnectionManager) changeUserController(user *core.User) {
+	if cm.userController != nil {
+		log.Warnf("UserController is already initialized, removing previous user controller")
+		if err := cm.userController.Close(); err != nil {
+			log.Errorf("Failed to close previous user controller: %v", err)
+		}
+	}
+	cm.userController = NewUserController(cm.eventEmitter, user)
+	log.Infof("UserController initialized for user %s", user.Name)
+}
+
+func (cm *ConnectionManager) removeUserController() {
+	if cm.userController != nil {
+		log.Infof("UserController is closing for user %s", cm.userController.user.Name)
+		if err := cm.userController.Close(); err != nil {
+			log.Errorf("Failed to close user controller: %v", err)
+		}
+		cm.userController = nil
+	} else {
+		log.Warnf("No UserController initialized, nothing to close")
 	}
 }
 
@@ -307,16 +294,16 @@ type UserController struct {
 	user         *core.User
 	mu           sync.RWMutex
 	connections  map[string]network.Conn
-	eventManager *core.EventManager
+	eventEmitter core.EventEmitter
 }
 
-func NewUserController(eventManager *core.EventManager, user *core.User) *UserController {
+func NewUserController(eventEmitter core.EventEmitter, user *core.User) *UserController {
 	return &UserController{
 		AtomicRunningStatus{},
 		user,
 		sync.RWMutex{},
 		make(map[string]network.Conn),
-		eventManager,
+		eventEmitter,
 	}
 }
 
@@ -341,7 +328,7 @@ func (uc *UserController) Close() error {
 }
 
 func (uc *UserController) emitEvent(event core.Event) {
-	uc.eventManager.Emit(event)
+	uc.eventEmitter.Emit(event)
 }
 
 func (uc *UserController) addConnection(conn *network.Conn) string {

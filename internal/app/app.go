@@ -39,6 +39,10 @@ func (a *App) Run() {
 			continue
 		}
 
+		commands := a.mapEventToCommands(event)
+
+		a.executeCommands(commands, ctx)
+
 		switch event.(type) {
 		case core.QuitEvent:
 			isRunning = false
@@ -53,6 +57,34 @@ func (a *App) Run() {
 
 	// Wait for all goroutines to finish
 	wg.Wait()
+}
+
+func (a *App) mapEventToCommands(event core.Event) []core.Command {
+	// TODO: Implement priority handling if needed
+	commands := make([]core.Command, 0)
+	for _, service := range a.services.GetAll() {
+		cmds := service.MapEventToCommands(event)
+		commands = append(commands, cmds...)
+	}
+
+	return commands
+}
+
+func (a *App) executeCommands(commands []core.Command, ctx context.Context) {
+	var events []core.Event
+	for _, cmd := range commands {
+		cmdEvents, err := cmd.Execute(ctx)
+		if err != nil {
+			log.Errorf("Failed to execute command: %v\n", err)
+
+			continue
+		}
+		events = append(events, cmdEvents...)
+	}
+
+	for _, e := range events {
+		a.eventManager.Emit(e)
+	}
 }
 
 func (a *App) close() {

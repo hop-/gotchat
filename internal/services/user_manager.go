@@ -9,13 +9,13 @@ import (
 )
 
 type UserManager struct {
-	em       *core.EventManager
-	userRepo core.Repository[core.User]
+	eventEmitter core.EventEmitter
+	userRepo     core.Repository[core.User]
 }
 
-func NewUserManager(em *core.EventManager, userRepo core.Repository[core.User]) *UserManager {
+func NewUserManager(eventEmitter core.EventEmitter, userRepo core.Repository[core.User]) *UserManager {
 	return &UserManager{
-		em,
+		eventEmitter,
 		userRepo,
 	}
 }
@@ -29,6 +29,12 @@ func (u *UserManager) Name() string {
 }
 
 func (u *UserManager) Run(ctx context.Context, wg *sync.WaitGroup) {
+	// This service does not run any background tasks.
+}
+
+func (u *UserManager) MapEventToCommands(event core.Event) []core.Command {
+	// TODO
+	return nil
 }
 
 func (u *UserManager) Close() error {
@@ -81,7 +87,7 @@ func (u *UserManager) UpdateUser(user *core.User) error {
 		return err
 	}
 
-	u.em.Emit(core.UserUpdatedEvent{
+	u.eventEmitter.Emit(core.UserUpdatedEvent{
 		User: user,
 	})
 
@@ -103,7 +109,7 @@ func (u *UserManager) CreateUser(name string, password string) (*core.User, erro
 		return nil, err
 	}
 
-	u.em.Emit(core.UserCreatedEvent{
+	u.eventEmitter.Emit(core.UserCreatedEvent{
 		User: user,
 	})
 
@@ -132,7 +138,7 @@ func (u *UserManager) LoginUser(user *core.User, password string) (*core.User, e
 		return nil, err
 	}
 
-	u.em.Emit(core.UserLoggedInEvent{
+	u.eventEmitter.Emit(core.UserLoggedInEvent{
 		User: user,
 	})
 

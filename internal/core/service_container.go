@@ -14,6 +14,10 @@ func NewContainer() *ServiceContainer {
 	return &ServiceContainer{}
 }
 
+func (c *ServiceContainer) GetAll() []Service {
+	return c.services
+}
+
 func (c *ServiceContainer) Register(s Service) {
 	c.services = append(c.services, s)
 }

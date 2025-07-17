@@ -61,7 +61,6 @@ func buildApplicationWithoutServer() *app.App {
 
 	// Create a new chat manager service and set it in the builder
 	chatManager := services.NewChatManager(
-		em,
 		userManager,
 		storage.GetChannelRepository(),
 		storage.GetAttendanceRepository(),
