@@ -34,6 +34,8 @@ func (m *EventManager) Register(ctx context.Context) EventListener {
 	m.listeners = append(m.listeners, ch)
 	m.listenersMu.Unlock()
 
+	// Unregister as soon as the context is done
+	// Note: May be better to manually unregister in the caller
 	go func() {
 		<-ctx.Done()
 		m.Unregister(ch)
