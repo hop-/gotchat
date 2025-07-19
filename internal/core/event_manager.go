@@ -11,8 +11,19 @@ type EventEmitter interface {
 	Emit(Event)
 }
 
+// Event Listener is a channel that receives events
 type EventListener chan Event
 
+func (l EventListener) Next(ctx context.Context) (Event, error) {
+	select {
+	case e := <-l:
+		return e, nil
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	}
+}
+
+// EventManager is responsible for managing event listeners
 type EventManager struct {
 	bufferSize  int
 	listenersMu sync.RWMutex
@@ -69,14 +80,5 @@ func (m *EventManager) Emit(e Event) {
 			// TODO: handle the case where the channel is full
 			// Optional: log dropped events or block
 		}
-	}
-}
-
-func (l EventListener) Next(ctx context.Context) (Event, error) {
-	select {
-	case e := <-l:
-		return e, nil
-	case <-ctx.Done():
-		return nil, ctx.Err()
 	}
 }
