@@ -24,7 +24,7 @@ type ConnectionAcceptError struct {
 	Err error
 }
 
-type ConnectionError struct {
+type ConnectionFailed struct {
 	Err error
 }
 
@@ -110,8 +110,9 @@ func (cm *ConnectionManager) Close() error {
 	return nil
 }
 
+// MapEventToCommands maps incoming events to their corresponding commands for the ConnectionManager.
 func (cm *ConnectionManager) MapEventToCommands(event core.Event) []core.Command {
-	commands := make([]core.Command, 0)
+	var commands []core.Command
 	switch e := event.(type) {
 	case core.ConnectEvent:
 		address := fmt.Sprintf("%s:%s", e.Host, e.Port)
@@ -135,7 +136,7 @@ func (cm *ConnectionManager) Connect(address string) (string, error) {
 	client := NewClient(address)
 	conn, err := client.Connect()
 	if err != nil {
-		cm.emitEvent(ConnectionError{err})
+		cm.emitEvent(ConnectionFailed{err})
 
 		return "", err
 	}
@@ -145,7 +146,7 @@ func (cm *ConnectionManager) Connect(address string) (string, error) {
 
 		return "", fmt.Errorf("user controller is not initialized")
 	}
-	connId := cm.userController.Register(conn)
+	connId := cm.userController.Register(conn, false)
 
 	return connId, nil
 }
@@ -173,7 +174,7 @@ func (cm *ConnectionManager) runServer(ctx context.Context, wg *sync.WaitGroup) 
 			}
 
 			if cm.userController != nil {
-				cm.userController.Register(conn)
+				cm.userController.Register(conn, true)
 			} else {
 				// TODO: Handle connection without user controller
 				log.Infof("No UserController initialized, closing connection")
@@ -192,6 +193,7 @@ func (cm *ConnectionManager) changeUserController(user *core.User) {
 		}
 	}
 	cm.userController = NewUserController(cm.eventEmitter, user)
+	cm.userController.setRunningStatus(true)
 	log.Infof("UserController initialized for user %s", user.Name)
 }
 
@@ -307,10 +309,10 @@ func NewUserController(eventEmitter core.EventEmitter, user *core.User) *UserCon
 	}
 }
 
-func (uc *UserController) Register(conn *network.Conn) string {
+func (uc *UserController) Register(conn *network.Conn, isServer bool) string {
 	log.Debugf("Registering new connection for user %s", uc.user.Name)
 	connId := uc.addConnection(conn)
-	go uc.handleConnection(connId, conn)
+	go uc.handleConnection(connId, conn, isServer)
 
 	return connId
 }
@@ -351,20 +353,36 @@ func (uc *UserController) removeConnection(id string) {
 	uc.emitEvent(ConnectionClosed{id})
 }
 
-func (uc *UserController) handleConnection(connId string, conn *network.Conn) {
+func (uc *UserController) handleConnection(connId string, conn *network.Conn, isServer bool) {
 	// Ensure the connection is closed and removed when done
 	defer conn.Close()
 	defer uc.removeConnection(connId)
 
-	// TODO: Handle handshake or any initial setup for the connection
+	// Handshake
+	if isServer {
+		err := uc.acceptHandshake(connId, conn)
+		if err != nil {
+			log.Errorf("Handshake failed for connection %s: %v", connId, err)
+			uc.emitEvent(ConnectionFailed{err})
+
+			return
+		}
+	} else {
+		err := uc.initiateHandshake(connId, conn)
+		if err != nil {
+			log.Errorf("Handshake initiation failed for connection %s: %v", connId, err)
+			uc.emitEvent(ConnectionFailed{err})
+
+			return
+		}
+	}
 
 	for uc.isRunning() {
 		m, err := conn.Read()
 		if err != nil {
-			// Handle connection close
+			// Check connection close
 			if network.IsClosedError(err) {
 				log.Infof("Connection %s closed", connId)
-				uc.emitEvent(ConnectionClosed{connId})
 
 				// Exit the loop
 				break
@@ -377,4 +395,103 @@ func (uc *UserController) handleConnection(connId string, conn *network.Conn) {
 		_ = m
 		uc.emitEvent(NewMessage{connId})
 	}
+}
+
+func (uc *UserController) initiateHandshake(connId string, conn *network.Conn) error {
+	if !uc.isRunning() {
+		log.Errorf("UserController is not running")
+
+		return fmt.Errorf("user controller is not running")
+	}
+	if uc.user == nil {
+		log.Errorf("User is not set")
+
+		return fmt.Errorf("user is not set")
+	}
+
+	log.Infof("Initiating handshake for connection %s with user %s", connId, uc.user.Name)
+
+	// Send a handshake message to the server
+	err := conn.Write(network.NewMessage(map[string]string{
+		"action": "authenticate",
+		"user":   uc.user.Name,
+		"userId": uc.user.UniqueId,
+	}, nil))
+	if err != nil {
+		if network.IsClosedError(err) {
+			log.Infof("Connection %s closed by peer before the handshake", connId)
+		}
+
+		return err
+	}
+
+	// Receive the handshake response
+	msg, err := conn.Read()
+	if err != nil {
+		return err
+	}
+
+	// Checking message
+	if action, ok := msg.Headers()["action"]; !ok || action != "authenticate" {
+		return fmt.Errorf("handshake response missing or invalid action: %s", action)
+	}
+
+	var userId string
+	var ok bool
+	if userId, ok = msg.Headers()["userId"]; !ok {
+		return fmt.Errorf("handshake response missing userId")
+	}
+
+	log.Debugf("Handshake user ID: %s", userId)
+	// TODO: Implement the handshake logic
+
+	return nil
+}
+
+func (uc *UserController) acceptHandshake(connId string, conn *network.Conn) error {
+	if !uc.isRunning() {
+		log.Errorf("UserController is not running")
+
+		return fmt.Errorf("user controller is not running")
+	}
+
+	if uc.user == nil {
+		log.Errorf("User is not set")
+
+		return fmt.Errorf("user is not set")
+	}
+
+	log.Infof("Accepting handshake for connection %s", connId)
+
+	// Receive the handshake response
+	msg, err := conn.Read()
+	if err != nil {
+		return err
+	}
+
+	// Checking message
+	if action, ok := msg.Headers()["action"]; !ok || action != "authenticate" {
+		return fmt.Errorf("handshake response missing or invalid action: %s", action)
+	}
+
+	var userId string
+	var ok bool
+	if userId, ok = msg.Headers()["userId"]; !ok {
+		return fmt.Errorf("handshake response missing userId")
+	}
+
+	log.Debugf("Handshake user ID: %s", userId)
+
+	// Send a handshake message to the server
+	err = conn.Write(network.NewMessage(map[string]string{
+		"action": "authenticate",
+		"user":   uc.user.Name,
+		"userId": uc.user.UniqueId,
+	}, nil))
+	if err != nil {
+		return err
+	}
+	// TODO: Implement the actual handshake acceptance logic
+
+	return nil
 }

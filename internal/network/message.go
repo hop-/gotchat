@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+
+	"github.com/hop-/gotchat/internal/log"
 )
 
 type Message struct {
@@ -75,6 +77,10 @@ func bytesToHeaders(headerData []byte) (map[string]string, error) {
 	lines := bytes.Split(headerData, []byte("\r\n"))
 
 	for _, line := range lines {
+		log.Debugf("Parsing header line: %s", line)
+		if len(line) == 0 {
+			continue // Skip empty lines
+		}
 		parts := bytes.SplitN(line, []byte(":"), 2)
 		if len(parts) != 2 {
 			return nil, fmt.Errorf("invalid header line: %s", line)
