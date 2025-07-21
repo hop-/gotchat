@@ -80,6 +80,7 @@ func buildApplication() *app.App {
 	connectionManager := services.NewConnectionManager(
 		em,
 		server,
+		userManager,
 	)
 
 	builder.WithService(connectionManager)

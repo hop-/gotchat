@@ -72,6 +72,7 @@ func buildApplicationWithoutServer() *app.App {
 	connectionManager := services.NewConnectionManager(
 		em,
 		nil, // No server for client mode
+		userManager,
 	)
 
 	builder.WithService(connectionManager)

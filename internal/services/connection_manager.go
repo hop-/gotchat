@@ -41,19 +41,27 @@ type MessageReadError struct {
 // ConnectionManager Service
 type ConnectionManager struct {
 	AtomicRunningStatus
+	// Mutex
+	mu sync.RWMutex
+
 	eventEmitter core.EventEmitter
 	server       *Server
 
 	// User controller
 	userController *UserController
+
+	// User manager
+	userManager *UserManager
 }
 
-func NewConnectionManager(eventEmitter core.EventEmitter, server *Server) *ConnectionManager {
+func NewConnectionManager(eventEmitter core.EventEmitter, server *Server, userManager *UserManager) *ConnectionManager {
 	return &ConnectionManager{
 		AtomicRunningStatus{},
+		sync.RWMutex{},
 		eventEmitter,
 		server,
 		nil,
+		userManager,
 	}
 }
 
@@ -101,6 +109,9 @@ func (cm *ConnectionManager) Close() error {
 		cm.server.Close()
 	}
 
+	cm.mu.RLock()
+	defer cm.mu.RUnlock()
+	// Close the user controller if it exists
 	if cm.userController != nil {
 		if err := cm.userController.Close(); err != nil {
 			log.Errorf("Failed to close user controller: %v", err)
@@ -128,11 +139,15 @@ func (cm *ConnectionManager) MapEventToCommands(event core.Event) []core.Command
 }
 
 func (cm *ConnectionManager) Connect(address string) (string, error) {
+	cm.mu.RLock()
 	if !cm.isRunning() || cm.userController == nil {
 		log.Errorf("ConnectionManager is not running or user controller is not initialized")
 
+		cm.mu.RUnlock()
 		return "", fmt.Errorf("connection manager is not running or user controller is not initialized")
 	}
+	cm.mu.RUnlock()
+
 	client := NewClient(address)
 	conn, err := client.Connect()
 	if err != nil {
@@ -141,12 +156,14 @@ func (cm *ConnectionManager) Connect(address string) (string, error) {
 		return "", err
 	}
 
+	cm.mu.RLock()
+	defer cm.mu.RUnlock()
 	if cm.userController == nil {
 		conn.Close()
 
 		return "", fmt.Errorf("user controller is not initialized")
 	}
-	connId := cm.userController.Register(conn, false)
+	connId := cm.userController.Register(conn, true)
 
 	return connId, nil
 }
@@ -173,8 +190,10 @@ func (cm *ConnectionManager) runServer(ctx context.Context, wg *sync.WaitGroup) 
 				continue
 			}
 
+			cm.mu.RLock()
+			defer cm.mu.RUnlock()
 			if cm.userController != nil {
-				cm.userController.Register(conn, true)
+				cm.userController.Register(conn, false)
 			} else {
 				// TODO: Handle connection without user controller
 				log.Infof("No UserController initialized, closing connection")
@@ -186,6 +205,9 @@ func (cm *ConnectionManager) runServer(ctx context.Context, wg *sync.WaitGroup) 
 }
 
 func (cm *ConnectionManager) changeUserController(user *core.User) {
+	cm.mu.Lock()
+	defer cm.mu.Unlock()
+
 	if cm.userController != nil {
 		log.Warnf("UserController is already initialized, removing previous user controller")
 		if err := cm.userController.Close(); err != nil {
@@ -198,6 +220,9 @@ func (cm *ConnectionManager) changeUserController(user *core.User) {
 }
 
 func (cm *ConnectionManager) removeUserController() {
+	cm.mu.Lock()
+	defer cm.mu.Unlock()
+
 	if cm.userController != nil {
 		log.Infof("UserController is closing for user %s", cm.userController.user.Name)
 		if err := cm.userController.Close(); err != nil {
@@ -309,10 +334,10 @@ func NewUserController(eventEmitter core.EventEmitter, user *core.User) *UserCon
 	}
 }
 
-func (uc *UserController) Register(conn *network.Conn, isServer bool) string {
+func (uc *UserController) Register(conn *network.Conn, isInitator bool) string {
 	log.Debugf("Registering new connection for user %s", uc.user.Name)
 	connId := uc.addConnection(conn)
-	go uc.handleConnection(connId, conn, isServer)
+	go uc.handleConnection(connId, conn, isInitator)
 
 	return connId
 }
@@ -353,24 +378,24 @@ func (uc *UserController) removeConnection(id string) {
 	uc.emitEvent(ConnectionClosed{id})
 }
 
-func (uc *UserController) handleConnection(connId string, conn *network.Conn, isServer bool) {
+func (uc *UserController) handleConnection(connId string, conn *network.Conn, isInitiator bool) {
 	// Ensure the connection is closed and removed when done
 	defer conn.Close()
 	defer uc.removeConnection(connId)
 
 	// Handshake
-	if isServer {
-		err := uc.acceptHandshake(connId, conn)
+	if isInitiator {
+		err := uc.initiateHandshake(connId, conn)
 		if err != nil {
-			log.Errorf("Handshake failed for connection %s: %v", connId, err)
+			log.Errorf("Handshake initiation failed for connection %s: %v", connId, err)
 			uc.emitEvent(ConnectionFailed{err})
 
 			return
 		}
 	} else {
-		err := uc.initiateHandshake(connId, conn)
+		err := uc.acceptHandshake(connId, conn)
 		if err != nil {
-			log.Errorf("Handshake initiation failed for connection %s: %v", connId, err)
+			log.Errorf("Handshake failed for connection %s: %v", connId, err)
 			uc.emitEvent(ConnectionFailed{err})
 
 			return
