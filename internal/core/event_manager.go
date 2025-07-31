@@ -7,6 +7,12 @@ import (
 
 type HandlerFunc func(Event)
 
+type EventDispatcher interface {
+	Register(ctx context.Context) EventListener
+	Unregister(EventListener)
+	Emit(Event)
+}
+
 type EventEmitter interface {
 	Emit(Event)
 }

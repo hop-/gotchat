@@ -47,7 +47,7 @@ func buildApplicationWithoutServer() *app.App {
 
 	// Create a new application builder
 	builder := app.NewBuilder().
-		WithEventManager(100)
+		WithEventDispatcher(100)
 	// Get the event manager from the builder
 	em := builder.GetEventManager()
 

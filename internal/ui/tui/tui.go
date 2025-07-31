@@ -12,11 +12,11 @@ import (
 
 type Tui struct {
 	p  *tea.Program
-	em *core.EventManager
+	em core.EventDispatcher
 }
 
 func New(
-	em *core.EventManager,
+	em core.EventDispatcher,
 	userManager *services.UserManager,
 	chatManager *services.ChatManager,
 ) *Tui {

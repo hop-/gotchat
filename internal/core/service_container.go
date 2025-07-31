@@ -6,6 +6,14 @@ import (
 	"sync"
 )
 
+type ServiceDispatcher interface {
+	GetAll() []Service
+	Register(s Service)
+	InitAll() error
+	RunAll(ctx context.Context, wg *sync.WaitGroup) error
+	CloseAll() []error
+}
+
 type ServiceContainer struct {
 	services []Service
 }

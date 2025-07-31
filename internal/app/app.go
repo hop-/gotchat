@@ -10,8 +10,8 @@ import (
 )
 
 type App struct {
-	eventManager *core.EventManager
-	services     *core.ServiceContainer
+	eventManager core.EventDispatcher
+	services     core.ServiceDispatcher
 	ui           ui.UI
 }
 

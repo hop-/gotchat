@@ -18,7 +18,7 @@ func NewBuilder() *Builder {
 	}
 }
 
-func (b *Builder) WithEventManager(bufferSize int) *Builder {
+func (b *Builder) WithEventDispatcher(bufferSize int) *Builder {
 	b.em = core.NewEventManager(bufferSize)
 
 	return b
