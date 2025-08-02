@@ -15,8 +15,9 @@ func GetFieldNamesOfEntity[T Entity]() []string {
 
 	for i := 0; i < t.NumField(); i++ {
 		field := t.Field(i)
-		fieldName := field.Tag.Get("name")
-		fieldNames = append(fieldNames, fieldName)
+		if fieldName, ok := field.Tag.Lookup("name"); ok {
+			fieldNames = append(fieldNames, fieldName)
+		}
 	}
 
 	return fieldNames
