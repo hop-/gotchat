@@ -436,38 +436,19 @@ func (uc *UserController) initiateHandshake(connId string, conn *network.Conn) e
 
 	log.Infof("Initiating handshake for connection %s with user %s", connId, uc.user.Name)
 
-	// Send a handshake message to the server
-	err := conn.Write(network.NewMessage(map[string]string{
-		"action": "authenticate",
-		"user":   uc.user.Name,
-		"userId": uc.user.UniqueId,
-	}, nil))
+	// Send a handshake message to the peer
+	err := uc.sendHandshakeUserInfo(connId, conn)
 	if err != nil {
-		if network.IsClosedError(err) {
-			log.Infof("Connection %s closed by peer before the handshake", connId)
-		}
-
 		return err
 	}
 
 	// Receive the handshake response
-	msg, err := conn.Read()
+	userId, err := uc.receiveHandshakeUserInfo(conn)
 	if err != nil {
 		return err
 	}
-
-	// Checking message
-	if action, ok := msg.Headers()["action"]; !ok || action != "authenticate" {
-		return fmt.Errorf("handshake response missing or invalid action: %s", action)
-	}
-
-	var userId string
-	var ok bool
-	if userId, ok = msg.Headers()["userId"]; !ok {
-		return fmt.Errorf("handshake response missing userId")
-	}
-
 	log.Debugf("Handshake user ID: %s", userId)
+
 	// TODO: Implement the handshake logic
 
 	return nil
@@ -489,34 +470,65 @@ func (uc *UserController) acceptHandshake(connId string, conn *network.Conn) err
 	log.Infof("Accepting handshake for connection %s", connId)
 
 	// Receive the handshake response
-	msg, err := conn.Read()
+	userId, err := uc.receiveHandshakeUserInfo(conn)
+	if err != nil {
+		return err
+	}
+	log.Debugf("Handshake user ID: %s", userId)
+
+	// Send a handshake message to the peer
+	err = uc.sendHandshakeUserInfo(connId, conn)
 	if err != nil {
 		return err
 	}
 
-	// Checking message
-	if action, ok := msg.Headers()["action"]; !ok || action != "authenticate" {
-		return fmt.Errorf("handshake response missing or invalid action: %s", action)
-	}
+	// TODO: Implement the actual handshake acceptance logic
 
-	var userId string
-	var ok bool
-	if userId, ok = msg.Headers()["userId"]; !ok {
-		return fmt.Errorf("handshake response missing userId")
-	}
+	return nil
+}
 
-	log.Debugf("Handshake user ID: %s", userId)
-
-	// Send a handshake message to the server
-	err = conn.Write(network.NewMessage(map[string]string{
+func (uc *UserController) sendHandshakeUserInfo(connId string, conn *network.Conn) error {
+	err := conn.Write(network.NewMessage(map[string]string{
 		"action": "authenticate",
 		"user":   uc.user.Name,
 		"userId": uc.user.UniqueId,
 	}, nil))
 	if err != nil {
+		if network.IsClosedError(err) {
+			log.Infof("Connection %s closed by peer before the handshake", connId)
+		}
+
 		return err
 	}
-	// TODO: Implement the actual handshake acceptance logic
 
 	return nil
+}
+
+func (uc *UserController) receiveHandshakeUserInfo(conn *network.Conn) (string, error) {
+	msg, err := conn.Read()
+	if err != nil {
+		if network.IsClosedError(err) {
+			log.Infof("Connection closed by peer before the handshake")
+		}
+
+		return "", err
+	}
+
+	// Checking message
+	if action, ok := msg.Headers()["action"]; !ok || action != "authenticate" {
+		return "", fmt.Errorf("handshake response missing or invalid action: %s", action)
+	}
+
+	var userId string
+	var ok bool
+	if userId, ok = msg.Headers()["userId"]; !ok {
+		return "", fmt.Errorf("handshake response missing userId")
+	}
+
+	// Validate user ID
+	if userId == uc.user.UniqueId {
+		return "", fmt.Errorf("handshake user ID matches the current user: %s", userId)
+	}
+
+	return userId, nil
 }
