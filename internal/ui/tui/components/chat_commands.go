@@ -28,13 +28,16 @@ func init() {
 
 	// Add the connect command
 	connectCommand := func(args ...string) tea.Cmd {
-		if len(args) < 1 || len(args) > 2 {
+		if len(args) > 2 {
 			return commands.Error("connect command requires host and port")
 		}
 
 		var host, port string
 
-		if len(args) == 1 || strings.Contains(args[0], ":") {
+		if len(args) == 0 {
+			host = "localhost"
+			port = "7665"
+		} else if len(args) == 1 && strings.Contains(args[0], ":") {
 			// If only one argument is provided, it should be in the format "host:port"
 			parts := strings.SplitN(args[0], ":", 2)
 			if len(parts) != 2 {
@@ -53,6 +56,8 @@ func init() {
 		return commands.Connect(host, port)
 	}
 	chatCommands["connect"] = connectCommand
+	chatCommands["dail"] = connectCommand
+	chatCommands["c"] = connectCommand
 }
 
 func chatCommandExecuted(name string, args ...string) tea.Cmd {
