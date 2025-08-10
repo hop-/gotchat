@@ -10,34 +10,6 @@ import (
 	"github.com/hop-/gotchat/internal/network"
 )
 
-// Events
-type NewConnection struct {
-	Id   string
-	Conn *network.Conn
-}
-
-type ConnectionClosed struct {
-	Id string
-}
-
-type ConnectionAcceptError struct {
-	Err error
-}
-
-type ConnectionFailed struct {
-	Err error
-}
-
-type NewMessage struct {
-	ConnId string
-	// TODO: add message payload
-}
-
-type MessageReadError struct {
-	ConnId string
-	Err    error
-}
-
 // ConnectionManager Service
 type ConnectionManager struct {
 	AtomicRunningStatus
@@ -214,7 +186,7 @@ func (cm *ConnectionManager) changeUserController(user *core.User) {
 			log.Errorf("Failed to close previous user controller: %v", err)
 		}
 	}
-	cm.userController = NewUserController(cm.eventEmitter, user)
+	cm.userController = NewUserController(cm.eventEmitter, cm.userManager, user)
 	cm.userController.setRunningStatus(true)
 	log.Infof("UserController initialized for user %s", user.Name)
 }
@@ -318,19 +290,25 @@ func (c *Client) Connect() (*network.Conn, error) {
 // User Controller
 type UserController struct {
 	AtomicRunningStatus
-	user         *core.User
-	mu           sync.RWMutex
-	connections  map[string]network.Conn
+
+	user *core.User
+
+	mu          sync.RWMutex
+	connections map[string]network.Conn
+
 	eventEmitter core.EventEmitter
+
+	UserManager *UserManager
 }
 
-func NewUserController(eventEmitter core.EventEmitter, user *core.User) *UserController {
+func NewUserController(eventEmitter core.EventEmitter, userManager *UserManager, user *core.User) *UserController {
 	return &UserController{
 		AtomicRunningStatus{},
 		user,
 		sync.RWMutex{},
 		make(map[string]network.Conn),
 		eventEmitter,
+		userManager,
 	}
 }
 
@@ -384,22 +362,12 @@ func (uc *UserController) handleConnection(connId string, conn *network.Conn, is
 	defer uc.removeConnection(connId)
 
 	// Handshake
-	if isInitiator {
-		err := uc.initiateHandshake(connId, conn)
-		if err != nil {
-			log.Errorf("Handshake initiation failed for connection %s: %v", connId, err)
-			uc.emitEvent(ConnectionFailed{err})
+	err := uc.handshake(connId, conn, isInitiator)
+	if err != nil {
+		log.Errorf("Handshake failed for connection %s: %v", connId, err)
+		uc.emitEvent(ConnectionFailed{err})
 
-			return
-		}
-	} else {
-		err := uc.acceptHandshake(connId, conn)
-		if err != nil {
-			log.Errorf("Handshake failed for connection %s: %v", connId, err)
-			uc.emitEvent(ConnectionFailed{err})
-
-			return
-		}
+		return
 	}
 
 	for uc.isRunning() {
@@ -422,16 +390,44 @@ func (uc *UserController) handleConnection(connId string, conn *network.Conn, is
 	}
 }
 
-func (uc *UserController) initiateHandshake(connId string, conn *network.Conn) error {
+func (uc *UserController) handshake(connId string, conn *network.Conn, isInitiator bool) error {
+	var userId string
+	var err error
+
+	if isInitiator {
+		userId, err = uc.initiateAuthentication(connId, conn)
+		if err != nil {
+			return err
+		}
+	} else {
+		userId, err = uc.acceptAuthentication(connId, conn)
+		if err != nil {
+			return err
+		}
+	}
+
+	user, err := uc.UserManager.GetUserByUniqueId(userId)
+	if err != nil {
+		return err
+	}
+
+	uc.handleAuthenticatedConnection(user, connId, conn)
+
+	// TODO use upgraded connection
+
+	return nil
+}
+
+func (uc *UserController) initiateAuthentication(connId string, conn *network.Conn) (string, error) {
 	if !uc.isRunning() {
 		log.Errorf("UserController is not running")
 
-		return fmt.Errorf("user controller is not running")
+		return "", fmt.Errorf("user controller is not running")
 	}
 	if uc.user == nil {
 		log.Errorf("User is not set")
 
-		return fmt.Errorf("user is not set")
+		return "", fmt.Errorf("user is not set")
 	}
 
 	log.Infof("Initiating handshake for connection %s with user %s", connId, uc.user.Name)
@@ -439,32 +435,30 @@ func (uc *UserController) initiateHandshake(connId string, conn *network.Conn) e
 	// Send a handshake message to the peer
 	err := uc.sendHandshakeUserInfo(connId, conn)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	// Receive the handshake response
 	userId, err := uc.receiveHandshakeUserInfo(conn)
 	if err != nil {
-		return err
+		return "", err
 	}
 	log.Debugf("Handshake user ID: %s", userId)
 
-	// TODO: Implement the handshake logic
-
-	return nil
+	return userId, nil
 }
 
-func (uc *UserController) acceptHandshake(connId string, conn *network.Conn) error {
+func (uc *UserController) acceptAuthentication(connId string, conn *network.Conn) (string, error) {
 	if !uc.isRunning() {
 		log.Errorf("UserController is not running")
 
-		return fmt.Errorf("user controller is not running")
+		return "", fmt.Errorf("user controller is not running")
 	}
 
 	if uc.user == nil {
 		log.Errorf("User is not set")
 
-		return fmt.Errorf("user is not set")
+		return "", fmt.Errorf("user is not set")
 	}
 
 	log.Infof("Accepting handshake for connection %s", connId)
@@ -472,19 +466,21 @@ func (uc *UserController) acceptHandshake(connId string, conn *network.Conn) err
 	// Receive the handshake response
 	userId, err := uc.receiveHandshakeUserInfo(conn)
 	if err != nil {
-		return err
+		return "", err
 	}
 	log.Debugf("Handshake user ID: %s", userId)
 
 	// Send a handshake message to the peer
 	err = uc.sendHandshakeUserInfo(connId, conn)
 	if err != nil {
-		return err
+		return "", err
 	}
 
-	// TODO: Implement the actual handshake acceptance logic
+	return userId, nil
+}
 
-	return nil
+func (uc *UserController) handleAuthenticatedConnection(user *core.User, connId string, conn *network.Conn) {
+	// TODO: handle connection upgrade
 }
 
 func (uc *UserController) sendHandshakeUserInfo(connId string, conn *network.Conn) error {
