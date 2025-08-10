@@ -28,57 +28,38 @@ func (c *Conn) Conn() BasicConn {
 
 func (c *Conn) Read() (*Message, error) {
 	// Read the message size
-	var headersSize, bodySize int64
-	err := binary.Read(c.conn, binary.LittleEndian, &headersSize)
+	var messageSize uint64
+	err := binary.Read(c.conn, binary.LittleEndian, &messageSize)
 	if err != nil {
 		return nil, err
 	}
 
-	err = binary.Read(c.conn, binary.LittleEndian, &bodySize)
+	messageData := make([]byte, messageSize)
+	// Read the message data
+	err = c.readAll(messageData)
 	if err != nil {
 		return nil, err
 	}
 
-	headersData := make([]byte, headersSize)
-	// Read headers
-	err = c.readAll(headersData)
-	if err != nil {
-		return nil, err
-	}
-
-	body := make([]byte, bodySize)
-	// Read body
-	err = c.readAll(body)
-	if err != nil {
-		return nil, err
-	}
-
-	return newMessageFromBytes(headersData, body)
+	// Deserialize the message
+	return DeserializeMessage(messageData)
 }
 
 func (c *Conn) Write(m *Message) error {
-
-	headersData, body := m.toBytes()
-
-	// Write the message sizes
-	headerSize := len(headersData)
-	err := binary.Write(c.conn, binary.LittleEndian, int64(headerSize))
-	if err != nil {
-		return err
-	}
-	bodySize := len(body)
-	err = binary.Write(c.conn, binary.LittleEndian, int64(bodySize))
+	// Serialize the message
+	messageData, err := SerializeMessage(m)
 	if err != nil {
 		return err
 	}
 
-	// Write whole message
-	err = c.writeAll(headersData)
+	// Write the message size
+	err = binary.Write(c.conn, binary.LittleEndian, uint64(len(messageData)))
 	if err != nil {
 		return err
 	}
 
-	return c.writeAll(body)
+	// Write the message data
+	return c.writeAll(messageData)
 }
 
 func (c *Conn) Close() error {

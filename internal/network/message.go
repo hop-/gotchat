@@ -2,6 +2,7 @@ package network
 
 import (
 	"bytes"
+	"encoding/binary"
 	"encoding/json"
 	"fmt"
 )
@@ -50,6 +51,52 @@ func (m *Message) GetHeader(key string) (string, bool) {
 
 func (m *Message) DeleteHeader(key string) {
 	delete(m.headers, key)
+}
+
+func DeserializeMessage(data []byte) (*Message, error) {
+	if len(data) < 16 {
+		return nil, fmt.Errorf("data is too short")
+	}
+
+	// Read the message sizes
+	headersSize := binary.LittleEndian.Uint64(data[:8])
+	bodySize := binary.LittleEndian.Uint64(data[8:16])
+
+	if (headersSize + bodySize + 16) > uint64(len(data)) {
+		return nil, fmt.Errorf("data is too short for headers and body sizes")
+	}
+
+	headersData := data[16 : 16+headersSize]
+
+	body := data[16+headersSize : 16+headersSize+bodySize]
+
+	return newMessageFromBytes(headersData, body)
+}
+
+func SerializeMessage(m *Message) ([]byte, error) {
+	headersData, bodyData := m.toBytes()
+
+	var buf bytes.Buffer
+	err := binary.Write(&buf, binary.LittleEndian, uint64(len(headersData)))
+	if err != nil {
+		return nil, err
+	}
+
+	err = binary.Write(&buf, binary.LittleEndian, uint64(len(bodyData)))
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = buf.Write(headersData)
+	if err != nil {
+		return nil, err
+	}
+	_, err = buf.Write(bodyData)
+	if err != nil {
+		return nil, err
+	}
+
+	return buf.Bytes(), nil
 }
 
 func newMessageFromBytes(headersData []byte, bodyData []byte) (*Message, error) {
