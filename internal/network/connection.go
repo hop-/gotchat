@@ -14,6 +14,13 @@ type BasicConn interface {
 	Close() error
 }
 
+type AdvancedConn interface {
+	Conn() BasicConn
+	Read() (*Message, error)
+	Write(m *Message) error
+	Close() error
+}
+
 type Conn struct {
 	conn BasicConn
 }

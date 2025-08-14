@@ -294,7 +294,7 @@ type UserController struct {
 	user *core.User
 
 	mu          sync.RWMutex
-	connections map[string]network.Conn
+	connections map[string]network.AdvancedConn
 
 	eventEmitter core.EventEmitter
 
@@ -306,7 +306,7 @@ func NewUserController(eventEmitter core.EventEmitter, userManager *UserManager,
 		AtomicRunningStatus{},
 		user,
 		sync.RWMutex{},
-		make(map[string]network.Conn),
+		make(map[string]network.AdvancedConn),
 		eventEmitter,
 		userManager,
 	}
@@ -340,11 +340,22 @@ func (uc *UserController) addConnection(conn *network.Conn) string {
 	uc.mu.Lock()
 	defer uc.mu.Unlock()
 	id := generateUuid()
-	uc.connections[id] = *conn
+	uc.connections[id] = conn
 
 	uc.emitEvent(NewConnection{id, conn})
 
 	return id
+}
+
+func (uc *UserController) upgradeConnection(connId string, conn network.AdvancedConn) {
+	uc.mu.Lock()
+	defer uc.mu.Unlock()
+
+	if _, ok := uc.connections[connId]; ok {
+		uc.connections[connId] = conn
+
+		// TODO: Emit connection upgraded event
+	}
 }
 
 func (uc *UserController) removeConnection(id string) {
@@ -357,21 +368,30 @@ func (uc *UserController) removeConnection(id string) {
 }
 
 func (uc *UserController) handleConnection(connId string, conn *network.Conn, isInitiator bool) {
-	// Ensure the connection is closed and removed when done
-	defer conn.Close()
+	// Ensure the connection is removed when done
 	defer uc.removeConnection(connId)
 
 	// Handshake
-	err := uc.handshake(connId, conn, isInitiator)
+	secureConn, err := uc.handshake(connId, conn, isInitiator)
 	if err != nil {
+		// Close the original connection
+		conn.Close()
+
 		log.Errorf("Handshake failed for connection %s: %v", connId, err)
 		uc.emitEvent(ConnectionFailed{err})
 
 		return
 	}
 
+	// Ensure the connection is upgraded
+	defer secureConn.Close()
+
+	// Upgrade the connection
+	uc.upgradeConnection(connId, secureConn)
+
+	// Read messages from the secure connection
 	for uc.isRunning() {
-		m, err := conn.Read()
+		m, err := secureConn.Read()
 		if err != nil {
 			// Check connection close
 			if network.IsClosedError(err) {
@@ -390,32 +410,33 @@ func (uc *UserController) handleConnection(connId string, conn *network.Conn, is
 	}
 }
 
-func (uc *UserController) handshake(connId string, conn *network.Conn, isInitiator bool) error {
+func (uc *UserController) handshake(connId string, conn *network.Conn, isInitiator bool) (network.AdvancedConn, error) {
 	var userId string
 	var err error
 
 	if isInitiator {
 		userId, err = uc.initiateAuthentication(connId, conn)
 		if err != nil {
-			return err
+			return conn, err
 		}
 	} else {
 		userId, err = uc.acceptAuthentication(connId, conn)
 		if err != nil {
-			return err
+			return conn, err
 		}
 	}
 
 	user, err := uc.UserManager.GetUserByUniqueId(userId)
 	if err != nil {
-		return err
+		return conn, err
 	}
 
-	uc.handleAuthenticatedConnection(user, connId, conn)
+	secureConn, err := uc.handleAuthenticationAndUpgrade(user, connId, conn)
+	if err != nil {
+		return conn, err
+	}
 
-	// TODO use upgraded connection
-
-	return nil
+	return secureConn, nil
 }
 
 func (uc *UserController) initiateAuthentication(connId string, conn *network.Conn) (string, error) {
@@ -479,8 +500,10 @@ func (uc *UserController) acceptAuthentication(connId string, conn *network.Conn
 	return userId, nil
 }
 
-func (uc *UserController) handleAuthenticatedConnection(user *core.User, connId string, conn *network.Conn) {
+func (uc *UserController) handleAuthenticationAndUpgrade(user *core.User, connId string, conn *network.Conn) (*network.SecureConn, error) {
 	// TODO: handle connection upgrade
+
+	return nil, fmt.Errorf("handleAuthenticationAndUpgrade not implemented yet")
 }
 
 func (uc *UserController) sendHandshakeUserInfo(connId string, conn *network.Conn) error {

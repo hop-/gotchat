@@ -8,25 +8,29 @@ type SecureComponent interface {
 }
 
 type SecureConn struct {
-	Conn
-	sc SecureComponent
+	conn Conn
+	sc   SecureComponent
 }
 
 func NewSecureConn(conn Conn, sc SecureComponent) *SecureConn {
 	return &SecureConn{conn, sc}
 }
 
+func (c *SecureConn) Conn() BasicConn {
+	return c.conn.Conn()
+}
+
 func (c *SecureConn) Read() (*Message, error) {
 	// Read the message size
 	var messageSize uint64
-	err := binary.Read(c.conn, binary.LittleEndian, &messageSize)
+	err := binary.Read(c.conn.Conn(), binary.LittleEndian, &messageSize)
 	if err != nil {
 		return nil, err
 	}
 
 	encryptedMessageData := make([]byte, messageSize)
 	// Read the message data
-	err = c.readAll(encryptedMessageData)
+	err = c.conn.readAll(encryptedMessageData)
 	if err != nil {
 		return nil, err
 	}
@@ -55,11 +59,15 @@ func (c *SecureConn) Write(m *Message) error {
 	}
 
 	// Write the message size
-	err = binary.Write(c.conn, binary.LittleEndian, uint64(len(encryptedMessageData)))
+	err = binary.Write(c.conn.Conn(), binary.LittleEndian, uint64(len(encryptedMessageData)))
 	if err != nil {
 		return err
 	}
 
 	// Write the message data
-	return c.writeAll(encryptedMessageData)
+	return c.conn.writeAll(encryptedMessageData)
+}
+
+func (c *SecureConn) Close() error {
+	return c.conn.Close()
 }
