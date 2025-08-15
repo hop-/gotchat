@@ -34,16 +34,8 @@ func (c *Conn) Conn() BasicConn {
 }
 
 func (c *Conn) Read() (*Message, error) {
-	// Read the message size
-	var messageSize uint64
-	err := binary.Read(c.conn, binary.LittleEndian, &messageSize)
-	if err != nil {
-		return nil, err
-	}
-
-	messageData := make([]byte, messageSize)
-	// Read the message data
-	err = c.readAll(messageData)
+	// Read the message frame
+	messageData, err := c.readFrame()
 	if err != nil {
 		return nil, err
 	}
@@ -59,18 +51,30 @@ func (c *Conn) Write(m *Message) error {
 		return err
 	}
 
-	// Write the message size
-	err = binary.Write(c.conn, binary.LittleEndian, uint64(len(messageData)))
-	if err != nil {
-		return err
-	}
-
-	// Write the message data
-	return c.writeAll(messageData)
+	// Write the message frame
+	return c.WriteFrame(messageData)
 }
 
 func (c *Conn) Close() error {
 	return c.conn.Close()
+}
+
+func (c *Conn) readFrame() ([]byte, error) {
+	// Read the frame size
+	var frameSize uint64
+	err := binary.Read(c.conn, binary.LittleEndian, &frameSize)
+	if err != nil {
+		return nil, err
+	}
+
+	frameData := make([]byte, frameSize)
+	// Read the frame data
+	err = c.readAll(frameData)
+	if err != nil {
+		return nil, err
+	}
+
+	return frameData, nil
 }
 
 func (c *Conn) readAll(b []byte) error {
@@ -88,6 +92,17 @@ func (c *Conn) readAll(b []byte) error {
 	}
 
 	return nil
+}
+
+func (c *Conn) WriteFrame(frame []byte) error {
+	// Write the frame size
+	err := binary.Write(c.conn, binary.LittleEndian, uint64(len(frame)))
+	if err != nil {
+		return err
+	}
+
+	// Write the frame data
+	return c.writeAll(frame)
 }
 
 func (c *Conn) writeAll(b []byte) error {

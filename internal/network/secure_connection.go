@@ -1,7 +1,5 @@
 package network
 
-import "encoding/binary"
-
 type SecureComponent interface {
 	Encrypt(data []byte) ([]byte, error)
 	Decrypt(data []byte) ([]byte, error)
@@ -21,16 +19,8 @@ func (c *SecureConn) Conn() BasicConn {
 }
 
 func (c *SecureConn) Read() (*Message, error) {
-	// Read the message size
-	var messageSize uint64
-	err := binary.Read(c.conn.Conn(), binary.LittleEndian, &messageSize)
-	if err != nil {
-		return nil, err
-	}
-
-	encryptedMessageData := make([]byte, messageSize)
-	// Read the message data
-	err = c.conn.readAll(encryptedMessageData)
+	// Read the message frame
+	encryptedMessageData, err := c.conn.readFrame()
 	if err != nil {
 		return nil, err
 	}
@@ -58,14 +48,8 @@ func (c *SecureConn) Write(m *Message) error {
 		return err
 	}
 
-	// Write the message size
-	err = binary.Write(c.conn.Conn(), binary.LittleEndian, uint64(len(encryptedMessageData)))
-	if err != nil {
-		return err
-	}
-
-	// Write the message data
-	return c.conn.writeAll(encryptedMessageData)
+	// Write the message frame
+	return c.conn.WriteFrame(encryptedMessageData)
 }
 
 func (c *SecureConn) Close() error {
