@@ -17,10 +17,17 @@ type StorageDb interface {
 type Storage struct {
 	path string
 	db   *sql.DB
+
+	// Repositories
+	userRepo       core.Repository[core.User]
+	channelRepo    core.Repository[core.Channel]
+	attendanceRepo core.Repository[core.Attendance]
+	messageRepo    core.Repository[core.Message]
+	connectionRepo core.Repository[core.ConnectionDetails]
 }
 
 func NewStorage(path string) *Storage {
-	return &Storage{path, nil}
+	return &Storage{path, nil, nil, nil, nil, nil, nil}
 }
 
 func (s *Storage) Db() *sql.DB {
@@ -70,19 +77,43 @@ func (s *Storage) Close() error {
 }
 
 func (s *Storage) GetUserRepository() core.Repository[core.User] {
-	return newUserRepository(s)
+	if s.userRepo == nil {
+		s.userRepo = newUserRepository(s)
+	}
+
+	return s.userRepo
+}
+
+func (s *Storage) GetConnectionDetailsRepository() core.Repository[core.ConnectionDetails] {
+	if s.connectionRepo == nil {
+		s.connectionRepo = newConnectionDetailsRepository(s)
+	}
+
+	return s.connectionRepo
 }
 
 func (s *Storage) GetChannelRepository() core.Repository[core.Channel] {
-	return newChannelRepository(s)
+	if s.channelRepo == nil {
+		s.channelRepo = newChannelRepository(s)
+	}
+
+	return s.channelRepo
 }
 
 func (s *Storage) GetAttendanceRepository() core.Repository[core.Attendance] {
-	return newAttendanceRepository(s)
+	if s.attendanceRepo == nil {
+		s.attendanceRepo = newAttendanceRepository(s)
+	}
+
+	return s.attendanceRepo
 }
 
 func (s *Storage) GetMessageRepository() core.Repository[core.Message] {
-	return newMessageRepository(s)
+	if s.messageRepo == nil {
+		s.messageRepo = newMessageRepository(s)
+	}
+
+	return s.messageRepo
 }
 
 func (s *Storage) Name() string {
@@ -91,7 +122,11 @@ func (s *Storage) Name() string {
 
 func (s *Storage) createTables() error {
 	err := createUserTable(s.db)
+	if err != nil {
+		return err
+	}
 
+	err = createConnectionDetailsTable(s.db)
 	if err != nil {
 		return err
 	}
@@ -124,6 +159,30 @@ func createUserTable(db *sql.DB) error {
 		password TEXT NOT NULL,
 		last_login DATETIME DEFAULT CURRENT_TIMESTAMP
 	)`)
+
+	return err
+}
+
+func createConnectionDetailsTable(db *sql.DB) error {
+	// Create the connection_details table if it doesn't exist
+	_, err := db.Exec(`
+	CREATE TABLE IF NOT EXISTS connection_details (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		host_unique_id TEXT UNIQUE,
+		client_unique_id TEXT UNIQUE,
+		encryption_key TEXT NOT NULL,
+		decryption_key TEXT NOT NULL,
+		key_derivation_salt TEXT NOT NULL,
+		created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+	)`)
+
+	if err != nil {
+		return err
+	}
+
+	// Create an index on the host_unique_id and client_unique_id
+	_, err = db.Exec(`
+	CREATE UNIQUE INDEX IF NOT EXISTS uniq_connection_details_host_client ON connection_details (host_unique_id, client_unique_id)`)
 
 	return err
 }

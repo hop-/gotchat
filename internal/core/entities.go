@@ -31,6 +31,7 @@ func (e BaseEntity) GetId() int {
 	return e.Id
 }
 
+// User entity
 type User struct {
 	BaseEntity
 	UniqueId  string    `name:"unique_id"`
@@ -49,6 +50,30 @@ func NewUser(name string, password string) *User {
 	}
 }
 
+// ConnectionDetails entity
+type ConnectionDetails struct {
+	BaseEntity
+	HostUniqueId      string    `name:"host_unique_id"`
+	ClientUniqueId    string    `name:"client_unique_id"`
+	EncryptionKey     string    `name:"encryption_key"`
+	DecryptionKey     string    `name:"decryption_key"`
+	KeyDerivationSalt string    `name:"key_derivation_salt"`
+	CreatedAt         time.Time `name:"created_at"`
+}
+
+func NewConnectionDetails(hostUniqueId string, clientUniqueId string, encryptionKey string, decryptionKey string, keyDerivationSalt string) *ConnectionDetails {
+	return &ConnectionDetails{
+		BaseEntity:        BaseEntity{},
+		HostUniqueId:      hostUniqueId,
+		ClientUniqueId:    clientUniqueId,
+		EncryptionKey:     encryptionKey,
+		DecryptionKey:     decryptionKey,
+		KeyDerivationSalt: keyDerivationSalt,
+		CreatedAt:         time.Now(),
+	}
+}
+
+// Message entity
 type Message struct {
 	BaseEntity
 	UserId    int       `name:"user_id"`
@@ -67,6 +92,7 @@ func NewMessage(userId int, channelId int, text string) *Message {
 	}
 }
 
+// Channel entity
 type Channel struct {
 	BaseEntity
 	UniqueId string `name:"unique_id"`
@@ -81,9 +107,19 @@ func NewChannel(name string) *Channel {
 	}
 }
 
+// Attendance entity
 type Attendance struct {
 	BaseEntity
 	UserId    int       `name:"user_id"`
 	ChannelId int       `name:"channel_id"`
 	JoinedAt  time.Time `name:"joined_at"`
+}
+
+func NewAttendance(userId int, channelId int) *Attendance {
+	return &Attendance{
+		BaseEntity: BaseEntity{},
+		UserId:     userId,
+		ChannelId:  channelId,
+		JoinedAt:   time.Now(),
+	}
 }
