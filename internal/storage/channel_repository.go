@@ -15,7 +15,7 @@ func newChannelRepository(storage StorageDb) *ChannelRepository {
 func (r *ChannelRepository) GetOne(id int) (*core.Channel, error) {
 	row := r.Db().QueryRow("SELECT id, unique_id, name FROM channels WHERE id = ?", id)
 	if row == nil {
-		return nil, ErrNotFound
+		return nil, core.ErrEntityNotFound
 	}
 
 	var ch core.Channel
@@ -30,11 +30,11 @@ func (r *ChannelRepository) GetOne(id int) (*core.Channel, error) {
 
 func (r *ChannelRepository) GetOneBy(field string, value any) (*core.Channel, error) {
 	if !isFieldExist[core.Channel](field) {
-		return nil, ErrFieldNotExist
+		return nil, core.ErrEntityFieldNotExist
 	}
 	row := r.Db().QueryRow("SELECT id, unique_id, name FROM channels WHERE "+field+" = ?", value)
 	if row == nil {
-		return nil, ErrNotFound
+		return nil, core.ErrEntityNotFound
 	}
 
 	var ch core.Channel
@@ -68,7 +68,7 @@ func (r *ChannelRepository) GetAll() ([]*core.Channel, error) {
 
 func (r *ChannelRepository) GetAllBy(field string, value any) ([]*core.Channel, error) {
 	if !isFieldExist[core.Channel](field) {
-		return nil, ErrFieldNotExist
+		return nil, core.ErrEntityFieldNotExist
 	}
 
 	rows, err := r.Db().Query("SELECT id, unique_id, name FROM channels where "+field+" = ?", value)

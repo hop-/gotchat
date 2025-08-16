@@ -15,7 +15,7 @@ func newConnectionDetailsRepository(storage StorageDb) *ConnectionDetailsReposit
 func (r *ConnectionDetailsRepository) GetOne(id int) (*core.ConnectionDetails, error) {
 	row := r.Db().QueryRow("SELECT id, host_unique_id, client_unique_id, encryption_key, decryption_key, key_derivation_salt, created_at FROM connection_details WHERE id = ?", id)
 	if row == nil {
-		return nil, ErrNotFound
+		return nil, core.ErrEntityNotFound
 	}
 
 	var details core.ConnectionDetails
@@ -29,11 +29,11 @@ func (r *ConnectionDetailsRepository) GetOne(id int) (*core.ConnectionDetails, e
 
 func (r *ConnectionDetailsRepository) GetOneBy(field string, value any) (*core.ConnectionDetails, error) {
 	if !isFieldExist[core.ConnectionDetails](field) {
-		return nil, ErrFieldNotExist
+		return nil, core.ErrEntityFieldNotExist
 	}
 	row := r.Db().QueryRow("SELECT id, host_unique_id, client_unique_id, encryption_key, decryption_key, key_derivation_salt, created_at FROM connection_details WHERE "+field+" = ?", value)
 	if row == nil {
-		return nil, ErrNotFound
+		return nil, core.ErrEntityNotFound
 	}
 
 	var details core.ConnectionDetails
@@ -67,7 +67,7 @@ func (r *ConnectionDetailsRepository) GetAll() ([]*core.ConnectionDetails, error
 
 func (r *ConnectionDetailsRepository) GetAllBy(field string, value any) ([]*core.ConnectionDetails, error) {
 	if !isFieldExist[core.ConnectionDetails](field) {
-		return nil, ErrFieldNotExist
+		return nil, core.ErrEntityFieldNotExist
 	}
 
 	rows, err := r.Db().Query("SELECT id, host_unique_id, client_unique_id, encryption_key, decryption_key, key_derivation_salt, created_at FROM connection_details WHERE "+field+" = ?", value)

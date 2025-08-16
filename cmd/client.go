@@ -59,6 +59,10 @@ func buildApplicationWithoutServer() *app.App {
 	userManager := services.NewUserManager(em, storage.GetUserRepository())
 	builder.WithService(userManager)
 
+	// Create a new connection details manager and set it in the builder
+	connectionDetailsManager := services.NewConnectionDetailsManager(em, storage.GetConnectionDetailsRepository())
+	builder.WithService(connectionDetailsManager)
+
 	// Create a new chat manager service and set it in the builder
 	chatManager := services.NewChatManager(
 		userManager,
@@ -73,6 +77,7 @@ func buildApplicationWithoutServer() *app.App {
 		em,
 		nil, // No server for client mode
 		userManager,
+		connectionDetailsManager,
 	)
 
 	builder.WithService(connectionManager)

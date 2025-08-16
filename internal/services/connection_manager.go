@@ -10,6 +10,12 @@ import (
 	"github.com/hop-/gotchat/internal/network"
 )
 
+// Connection states
+const (
+	ConnectionStateKnown   = "KNOWN"
+	ConnectionStateUnknown = "UNKNOWN"
+)
+
 // ConnectionManager Service
 type ConnectionManager struct {
 	AtomicRunningStatus
@@ -24,9 +30,12 @@ type ConnectionManager struct {
 
 	// User manager
 	userManager *UserManager
+
+	// Connection details manager
+	connectionDetailsManager *ConnectionDetailsManager
 }
 
-func NewConnectionManager(eventEmitter core.EventEmitter, server *Server, userManager *UserManager) *ConnectionManager {
+func NewConnectionManager(eventEmitter core.EventEmitter, server *Server, userManager *UserManager, connectionDetailsManager *ConnectionDetailsManager) *ConnectionManager {
 	return &ConnectionManager{
 		AtomicRunningStatus{},
 		sync.RWMutex{},
@@ -34,6 +43,7 @@ func NewConnectionManager(eventEmitter core.EventEmitter, server *Server, userMa
 		server,
 		nil,
 		userManager,
+		connectionDetailsManager,
 	}
 }
 
@@ -186,7 +196,7 @@ func (cm *ConnectionManager) changeUserController(user *core.User) {
 			log.Errorf("Failed to close previous user controller: %v", err)
 		}
 	}
-	cm.userController = NewUserController(cm.eventEmitter, cm.userManager, user)
+	cm.userController = NewUserController(user, cm.eventEmitter, cm.userManager, cm.connectionDetailsManager)
 	cm.userController.setRunningStatus(true)
 	log.Infof("UserController initialized for user %s", user.Name)
 }
@@ -291,17 +301,23 @@ func (c *Client) Connect() (*network.Conn, error) {
 type UserController struct {
 	AtomicRunningStatus
 
+	// User associated with this controller
 	user *core.User
 
 	mu          sync.RWMutex
 	connections map[string]network.AdvancedConn
 
+	// Event emitter for user-related events
 	eventEmitter core.EventEmitter
 
+	// User manager
 	UserManager *UserManager
+
+	// Connection details manager
+	connectionDetailsManager *ConnectionDetailsManager
 }
 
-func NewUserController(eventEmitter core.EventEmitter, userManager *UserManager, user *core.User) *UserController {
+func NewUserController(user *core.User, eventEmitter core.EventEmitter, userManager *UserManager, connectionDetailsManager *ConnectionDetailsManager) *UserController {
 	return &UserController{
 		AtomicRunningStatus{},
 		user,
@@ -309,6 +325,7 @@ func NewUserController(eventEmitter core.EventEmitter, userManager *UserManager,
 		make(map[string]network.AdvancedConn),
 		eventEmitter,
 		userManager,
+		connectionDetailsManager,
 	}
 }
 
@@ -411,29 +428,30 @@ func (uc *UserController) handleConnection(connId string, conn *network.Conn, is
 }
 
 func (uc *UserController) handshake(connId string, conn *network.Conn, isInitiator bool) (network.AdvancedConn, error) {
-	var userId string
+	var clientUserId string
+	var secureConn *network.SecureConn
 	var err error
 
 	if isInitiator {
-		userId, err = uc.initiateAuthentication(connId, conn)
+		clientUserId, err = uc.initiateAuthentication(connId, conn)
+		if err != nil {
+			return conn, err
+		}
+
+		secureConn, err = uc.initiateAndHandleAuthenticationAndUpgrade(clientUserId, connId, conn)
 		if err != nil {
 			return conn, err
 		}
 	} else {
-		userId, err = uc.acceptAuthentication(connId, conn)
+		clientUserId, err = uc.acceptAuthentication(connId, conn)
 		if err != nil {
 			return conn, err
 		}
-	}
 
-	user, err := uc.UserManager.GetUserByUniqueId(userId)
-	if err != nil {
-		return conn, err
-	}
-
-	secureConn, err := uc.handleAuthenticationAndUpgrade(user, connId, conn)
-	if err != nil {
-		return conn, err
+		secureConn, err = uc.acceptAndHandleAuthenticationAndUpgrade(clientUserId, connId, conn)
+		if err != nil {
+			return conn, err
+		}
 	}
 
 	return secureConn, nil
@@ -500,8 +518,95 @@ func (uc *UserController) acceptAuthentication(connId string, conn *network.Conn
 	return userId, nil
 }
 
-func (uc *UserController) handleAuthenticationAndUpgrade(user *core.User, connId string, conn *network.Conn) (*network.SecureConn, error) {
-	// TODO: handle connection upgrade
+func (uc *UserController) initiateAndHandleAuthenticationAndUpgrade(clientUserId string, connId string, conn *network.Conn) (*network.SecureConn, error) {
+	// Get the connection details for the client user id
+	connectionDetails, err := uc.connectionDetailsManager.GetConnectionDetails(uc.user.UniqueId, clientUserId)
+	if err != nil {
+		return nil, err
+	}
+
+	var connState string
+	if connectionDetails == nil {
+		connState = ConnectionStateUnknown
+	} else {
+		connState = ConnectionStateKnown
+	}
+
+	// Send state of the connection to the peer
+	log.Debugf("Sending connection state %s to peer for connection %s", connState, connId)
+	err = conn.Write(network.NewMessage(map[string]string{
+		"action": "connection_state",
+		"state":  connState,
+	}, nil))
+	if err != nil {
+		return nil, err
+	}
+
+	// Read the response from the peer about the connection state
+	msg, err := conn.Read()
+	if err != nil {
+		return nil, err
+	}
+
+	peerConnState := msg.Headers()["state"]
+
+	if connState == ConnectionStateUnknown && peerConnState != ConnectionStateUnknown {
+		return nil, fmt.Errorf("peer connection state is not unknown, expected %s, got %s", ConnectionStateUnknown, peerConnState)
+	}
+
+	if peerConnState == ConnectionStateUnknown {
+		// TODO: handle unknown state connection
+		return nil, fmt.Errorf("handle unknown state connection not implemented yet")
+	}
+
+	// TODO: handle known state connection
+
+	return nil, fmt.Errorf("handleAuthenticationAndUpgrade not implemented yet")
+}
+
+func (uc *UserController) acceptAndHandleAuthenticationAndUpgrade(clientUserId string, connId string, conn *network.Conn) (*network.SecureConn, error) {
+	// Read the response from the peer about the connection state
+	msg, err := conn.Read()
+	if err != nil {
+		return nil, err
+	}
+
+	// Get the connection details for the client user id
+	connectionDetails, err := uc.connectionDetailsManager.GetConnectionDetails(uc.user.UniqueId, clientUserId)
+	if err != nil {
+		return nil, err
+	}
+
+	peerConnState := msg.Headers()["state"]
+	var connState string
+
+	if peerConnState == ConnectionStateUnknown {
+		connState = ConnectionStateUnknown
+	} else {
+		if connectionDetails == nil {
+			connState = ConnectionStateUnknown
+		} else {
+			connState = ConnectionStateKnown
+		}
+	}
+
+	// Send the connection state to the peer
+	log.Debugf("Sending connection state %s to peer for connection %s", connState, connId)
+	err = conn.Write(network.NewMessage(map[string]string{
+		"action": "connection_state",
+		"state":  connState,
+	}, nil))
+	if err != nil {
+		return nil, err
+	}
+
+	if connState == ConnectionStateUnknown {
+		// TODO: handle unknown state connection
+
+		return nil, fmt.Errorf("handle unknown state connection not implemented yet")
+	}
+
+	// TODO: handle known state connection
 
 	return nil, fmt.Errorf("handleAuthenticationAndUpgrade not implemented yet")
 }

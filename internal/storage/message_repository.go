@@ -15,7 +15,7 @@ func newMessageRepository(storage StorageDb) *MessageRepository {
 func (r *MessageRepository) GetOne(id int) (*core.Message, error) {
 	row := r.Db().QueryRow("SELECT * FROM messages WHERE id = ?", id)
 	if row == nil {
-		return nil, ErrNotFound
+		return nil, core.ErrEntityNotFound
 	}
 	var message core.Message
 	err := row.Scan(&message.Id, &message.UserId, &message.ChannelId, &message.Text, &message.CreatedAt)
@@ -28,12 +28,12 @@ func (r *MessageRepository) GetOne(id int) (*core.Message, error) {
 
 func (r *MessageRepository) GetOneBy(field string, value any) (*core.Message, error) {
 	if !isFieldExist[core.Channel](field) {
-		return nil, ErrFieldNotExist
+		return nil, core.ErrEntityFieldNotExist
 	}
 
 	row := r.Db().QueryRow("SELECT * FROM messages WHERE "+field+" = ?", value)
 	if row == nil {
-		return nil, ErrNotFound
+		return nil, core.ErrEntityNotFound
 	}
 
 	var message core.Message
@@ -71,7 +71,7 @@ func (r *MessageRepository) GetAll() ([]*core.Message, error) {
 
 func (r *MessageRepository) GetAllBy(field string, value any) ([]*core.Message, error) {
 	if !isFieldExist[core.Channel](field) {
-		return nil, ErrFieldNotExist
+		return nil, core.ErrEntityFieldNotExist
 	}
 
 	rows, err := r.Db().Query("SELECT * FROM messages WHERE "+field+" = ?", value)

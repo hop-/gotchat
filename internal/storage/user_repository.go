@@ -15,7 +15,7 @@ func newUserRepository(storage StorageDb) *UserRepository {
 func (r *UserRepository) GetOne(id int) (*core.User, error) {
 	row := r.Db().QueryRow("SELECT id, unique_id, name, password, last_login FROM users WHERE id = ?", id)
 	if row == nil {
-		return nil, ErrNotFound
+		return nil, core.ErrEntityNotFound
 	}
 
 	var u core.User
@@ -30,11 +30,11 @@ func (r *UserRepository) GetOne(id int) (*core.User, error) {
 
 func (r *UserRepository) GetOneBy(field string, value any) (*core.User, error) {
 	if !isFieldExist[core.User](field) {
-		return nil, ErrFieldNotExist
+		return nil, core.ErrEntityFieldNotExist
 	}
 	row := r.Db().QueryRow("SELECT id, unique_id, name, password, last_login FROM users WHERE "+field+" = ?", value)
 	if row == nil {
-		return nil, ErrNotFound
+		return nil, core.ErrEntityNotFound
 	}
 
 	var u core.User
@@ -68,7 +68,7 @@ func (r *UserRepository) GetAll() ([]*core.User, error) {
 
 func (r *UserRepository) GetAllBy(field string, value any) ([]*core.User, error) {
 	if !isFieldExist[core.User](field) {
-		return nil, ErrFieldNotExist
+		return nil, core.ErrEntityFieldNotExist
 	}
 
 	rows, err := r.Db().Query("SELECT id, unique_id, name, password, last_login FROM users where "+field+" = ?", value)
