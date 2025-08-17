@@ -572,12 +572,50 @@ func (uc *UserController) initiateAndHandleAuthenticationAndUpgrade(clientUserId
 		return nil, fmt.Errorf("connection details not found for user %s and client %s", uc.user.UniqueId, clientUserId)
 	}
 
+	// Create the secure component for the connection
 	secureComponent, err := network.NewEncryption(connectionDetails.EncryptionKey, connectionDetails.DecryptionKey)
 	if err != nil {
 		return nil, err
 	}
 
-	return network.NewSecureConn(*conn, secureComponent), nil
+	secureConn := network.NewSecureConn(*conn, secureComponent)
+
+	// Generate a random phrase to send to the peer
+	randomPhrase := generateRandomString()
+
+	// Send the random phrase to the peer
+	log.Debugf("Sending random phrase to peer with connection id %s: %s", connId, randomPhrase)
+	err = secureConn.Write(network.NewMessage(map[string]string{
+		"action": "send_phrase",
+		"phrase": randomPhrase,
+	}, nil))
+	if err != nil {
+		return nil, err
+	}
+
+	// Receive the echoed phrase from the peer
+	log.Debugf("Waiting for echoed phrase from peer with connection id %s", connId)
+	msg, err = secureConn.Read()
+	if err != nil {
+		return nil, err
+	}
+
+	echoedPhrase := msg.Headers()["phrase"]
+
+	// Check if the echoed phrase matches the original random phrase
+	if echoedPhrase != randomPhrase {
+		log.Debugf("Echoed phrase does not match original phrase: %s != %s", echoedPhrase, randomPhrase)
+		err := uc.connectionDetailsManager.RemoveConnectionDetails(uc.user.UniqueId, clientUserId)
+		if err != nil {
+			return nil, err
+		}
+
+		return nil, fmt.Errorf("echoed phrase does not match original phrase")
+	}
+
+	log.Debugf("Echoed phrase matches original phrase: %s", echoedPhrase)
+
+	return secureConn, nil
 }
 
 func (uc *UserController) acceptAndHandleAuthenticationAndUpgrade(clientUserId string, connId string, conn *network.Conn) (*network.SecureConn, error) {
@@ -633,12 +671,36 @@ func (uc *UserController) acceptAndHandleAuthenticationAndUpgrade(clientUserId s
 		return nil, fmt.Errorf("connection details not found for user %s and client %s", uc.user.UniqueId, clientUserId)
 	}
 
+	// Create the secure component for the connection
 	secureComponent, err := network.NewEncryption(connectionDetails.EncryptionKey, connectionDetails.DecryptionKey)
 	if err != nil {
 		return nil, err
 	}
 
-	return network.NewSecureConn(*conn, secureComponent), nil
+	secureConn := network.NewSecureConn(*conn, secureComponent)
+
+	// Reading first phrase from secure connection
+	log.Debugf("Waiting for phrase from peer with connection id %s", connId)
+	msg, err = secureConn.Read()
+	if err != nil {
+		return nil, err
+	}
+
+	helloPhrase := msg.Headers()["phrase"]
+
+	// Sending the phrase back to the peer
+	log.Debugf("Sending echoed phrase back to peer with connection id %s: %s", connId, helloPhrase)
+	err = secureConn.Write(network.NewMessage(map[string]string{
+		"action": "echo_phrase",
+		"phrase": helloPhrase,
+	}, nil))
+	if err != nil {
+		return nil, err
+	}
+
+	log.Debugf("Echoed phrase back to peer: %s", helloPhrase)
+
+	return secureConn, nil
 }
 
 func (uc *UserController) generateAndExchangeKeys(connId string, conn *network.Conn) ([]byte, []byte, error) {

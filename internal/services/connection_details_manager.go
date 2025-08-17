@@ -214,6 +214,19 @@ func (m *ConnectionDetailsManager) UpsertConnectionDetails(host string, client s
 	return newConnectionDetailsFromEntity(m.mk, details)
 }
 
+func (m *ConnectionDetailsManager) RemoveConnectionDetails(host string, client string) error {
+	details, err := m.getConnectionDetails(host, client)
+	if err != nil {
+		return err
+	}
+
+	if details == nil {
+		return nil
+	}
+
+	return m.repo.Delete(details.Id)
+}
+
 func (m *ConnectionDetailsManager) getConnectionDetails(host string, client string) (*core.ConnectionDetails, error) {
 	// TODO: use better approach when available (GetOneWhere, GetOneByMany, etc.)
 	detailsList, err := m.repo.GetAllBy("host_unique_id", host)

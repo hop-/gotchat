@@ -1,6 +1,8 @@
 package services
 
 import (
+	"fmt"
+	"math/rand"
 	"sync"
 
 	"github.com/google/uuid"
@@ -31,4 +33,18 @@ func generateUuid() string {
 		return ""
 	}
 	return id.String()
+}
+
+func generateRandomInt(min, max int) int {
+	return rand.Intn(max-min+1) + min
+}
+
+func generateRandomString() string {
+	return fmt.Sprintf(
+		"%d-%d-%d-%d",
+		generateRandomInt(1000, 9999),
+		generateRandomInt(1000, 9999),
+		generateRandomInt(1000, 9999),
+		generateRandomInt(1000, 9999),
+	)
 }
