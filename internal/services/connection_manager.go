@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"sync"
 
@@ -555,13 +556,28 @@ func (uc *UserController) initiateAndHandleAuthenticationAndUpgrade(clientUserId
 	}
 
 	if peerConnState == ConnectionStateUnknown {
-		// TODO: handle unknown state connection
-		return nil, fmt.Errorf("handle unknown state connection not implemented yet")
+		// Handle unknown connection
+		encryptionKey, decryptionKey, err := uc.generateAndExchangeKeys(connId, conn)
+		if err != nil {
+			return nil, err
+		}
+
+		connectionDetails, err = uc.connectionDetailsManager.UpsertConnectionDetails(uc.user.UniqueId, clientUserId, encryptionKey, decryptionKey)
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	// TODO: handle known state connection
+	if connectionDetails == nil {
+		return nil, fmt.Errorf("connection details not found for user %s and client %s", uc.user.UniqueId, clientUserId)
+	}
 
-	return nil, fmt.Errorf("handleAuthenticationAndUpgrade not implemented yet")
+	secureComponent, err := network.NewEncryption(connectionDetails.EncryptionKey, connectionDetails.DecryptionKey)
+	if err != nil {
+		return nil, err
+	}
+
+	return network.NewSecureConn(*conn, secureComponent), nil
 }
 
 func (uc *UserController) acceptAndHandleAuthenticationAndUpgrade(clientUserId string, connId string, conn *network.Conn) (*network.SecureConn, error) {
@@ -601,14 +617,72 @@ func (uc *UserController) acceptAndHandleAuthenticationAndUpgrade(clientUserId s
 	}
 
 	if connState == ConnectionStateUnknown {
-		// TODO: handle unknown state connection
+		// handle unknown connection
+		encryptionKey, decryptionKey, err := uc.generateAndExchangeKeys(connId, conn)
+		if err != nil {
+			return nil, err
+		}
 
-		return nil, fmt.Errorf("handle unknown state connection not implemented yet")
+		connectionDetails, err = uc.connectionDetailsManager.UpsertConnectionDetails(uc.user.UniqueId, clientUserId, encryptionKey, decryptionKey)
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	// TODO: handle known state connection
+	if connectionDetails == nil {
+		return nil, fmt.Errorf("connection details not found for user %s and client %s", uc.user.UniqueId, clientUserId)
+	}
 
-	return nil, fmt.Errorf("handleAuthenticationAndUpgrade not implemented yet")
+	secureComponent, err := network.NewEncryption(connectionDetails.EncryptionKey, connectionDetails.DecryptionKey)
+	if err != nil {
+		return nil, err
+	}
+
+	return network.NewSecureConn(*conn, secureComponent), nil
+}
+
+func (uc *UserController) generateAndExchangeKeys(connId string, conn *network.Conn) ([]byte, []byte, error) {
+	log.Debugf("Generating and exchanging keys for connection %s", connId)
+	// Generate a new encryption key and decryption key
+	encryptionKey, err := network.GenerateKey()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// base64 the encryption key
+	passphrase := base64.StdEncoding.EncodeToString(encryptionKey)
+
+	// Send the keys to the peer
+	log.Debugf("Sending encryption key to peer for connection %s", connId)
+	err = conn.Write(network.NewMessage(map[string]string{
+		"action":     "exchange_keys",
+		"passphrase": passphrase,
+	}, nil))
+	if err != nil {
+		return nil, nil, err
+	}
+
+	log.Debugf("Waiting for decryption key from peer for connection %s", connId)
+	msg, err := conn.Read()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// Get the decryption key from the response
+	passphrase = msg.Headers()["passphrase"]
+
+	decryptionKey, err := base64.StdEncoding.DecodeString(passphrase)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if decryptionKey == nil {
+		return nil, nil, fmt.Errorf("decryption key is nil")
+	}
+
+	log.Debugf("Key exchange complete for connection %s", connId)
+
+	return encryptionKey, decryptionKey, nil
 }
 
 func (uc *UserController) sendHandshakeUserInfo(connId string, conn *network.Conn) error {
