@@ -1,6 +1,6 @@
 package services
 
-import "github.com/hop-/gotchat/internal/network"
+import "github.com/hop-/gotchat/pkg/network"
 
 type NewConnection struct {
 	Id   string

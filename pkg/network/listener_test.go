@@ -3,8 +3,6 @@ package network
 import (
 	"errors"
 	"testing"
-
-	"github.com/stretchr/testify/assert"
 )
 
 func TestListener_Accept_Success(t *testing.T) {
@@ -16,8 +14,12 @@ func TestListener_Accept_Success(t *testing.T) {
 	listener := NewListener(mockListener)
 	conn, err := listener.Accept()
 
-	assert.NoError(t, err)
-	assert.NotNil(t, conn)
+	if err != nil {
+		t.Errorf("expected no error, got %v", err)
+	}
+	if conn == nil {
+		t.Errorf("expected connection, got nil")
+	}
 	mockListener.AssertExpectations(t)
 }
 
@@ -29,8 +31,14 @@ func TestListener_Accept_Error(t *testing.T) {
 	listener := NewListener(mockListener)
 	conn, err := listener.Accept()
 
-	assert.Error(t, err)
-	assert.Nil(t, conn)
-	assert.EqualError(t, err, "accept error")
+	if err == nil {
+		t.Errorf("expected error, got nil")
+	}
+	if conn != nil {
+		t.Errorf("expected nil connection, got %v", conn)
+	}
+	if err == nil || err.Error() != "accept error" {
+		t.Errorf("expected error 'accept error', got %v", err)
+	}
 	mockListener.AssertExpectations(t)
 }

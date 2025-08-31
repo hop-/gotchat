@@ -5,8 +5,8 @@ import (
 	"sync"
 
 	"github.com/hop-/gotchat/internal/core"
-	"github.com/hop-/gotchat/internal/log"
 	"github.com/hop-/gotchat/internal/ui"
+	"github.com/hop-/gotchat/pkg/log"
 )
 
 type App struct {

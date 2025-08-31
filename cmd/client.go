@@ -3,10 +3,10 @@ package cmd
 import (
 	"github.com/hop-/gotchat/internal/app"
 	"github.com/hop-/gotchat/internal/config"
-	"github.com/hop-/gotchat/internal/log"
 	"github.com/hop-/gotchat/internal/services"
 	"github.com/hop-/gotchat/internal/storage"
 	"github.com/hop-/gotchat/internal/ui/tui"
+	"github.com/hop-/gotchat/pkg/log"
 	"github.com/spf13/cobra"
 )
 

@@ -2,8 +2,8 @@ package app
 
 import (
 	"github.com/hop-/gotchat/internal/core"
-	"github.com/hop-/gotchat/internal/log"
 	"github.com/hop-/gotchat/internal/ui"
+	"github.com/hop-/gotchat/pkg/log"
 )
 
 type Builder struct {

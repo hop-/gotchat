@@ -4,7 +4,7 @@ import (
 	"os"
 
 	"github.com/hop-/gotchat/internal/config"
-	"github.com/hop-/gotchat/internal/log"
+	"github.com/hop-/gotchat/pkg/log"
 	"github.com/spf13/cobra"
 )
 

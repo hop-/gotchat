@@ -18,6 +18,6 @@ packages:
   github.com/hop-/gotchat/internal/core:
     config:
       all: true
-  github.com/hop-/gotchat/internal/network:
+  github.com/hop-/gotchat/pkg/network:
     config:
       all: true

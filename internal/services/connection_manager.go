@@ -7,8 +7,8 @@ import (
 	"sync"
 
 	"github.com/hop-/gotchat/internal/core"
-	"github.com/hop-/gotchat/internal/log"
-	"github.com/hop-/gotchat/internal/network"
+	"github.com/hop-/gotchat/pkg/log"
+	"github.com/hop-/gotchat/pkg/network"
 )
 
 // Connection states
