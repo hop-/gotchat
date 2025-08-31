@@ -20,7 +20,32 @@ internal/
   core/       # Core entities and services
   logic/      # Business logic
   ui/         # Terminal-based user interface (TUI)
+
+pkg/
+  log/        # Logging utilities and structured logging
+  network/    # Network transport layer and connection management
 ```
+
+## Package Details
+
+### pkg/log
+
+The logging package provides structured logging capabilities with different log levels and configurable output formats. It includes:
+
+- Thread-safe logging operations
+- Multiple log levels (Debug, Info, Warn, Error)
+- Configurable output destinations
+- Builder pattern for logger configuration
+
+### pkg/network
+
+The network package handles all network-related operations including:
+
+- TCP connection management
+- Secure connection handling with encryption
+- Network message serialization and deserialization
+- Transport layer abstraction
+- Connection listeners and acceptors
 
 ## Prerequisites
 
