@@ -46,7 +46,7 @@ func (r *ConnectionDetailsRepository) GetOneBy(field string, value any) (*core.C
 }
 
 func (r *ConnectionDetailsRepository) GetAll() ([]*core.ConnectionDetails, error) {
-	rows, err := r.Db().Query("SELECT id, host_unique_id, client_unique_id, encryption_key, decryption_key, key_derivation_salt, created_at FROM connection_details")
+	rows, err := queryWithRetry(r.Db(), "SELECT id, host_unique_id, client_unique_id, encryption_key, decryption_key, key_derivation_salt, created_at FROM connection_details")
 	if err != nil {
 		return nil, err
 	}
@@ -70,7 +70,7 @@ func (r *ConnectionDetailsRepository) GetAllBy(field string, value any) ([]*core
 		return nil, core.ErrEntityFieldNotExist
 	}
 
-	rows, err := r.Db().Query("SELECT id, host_unique_id, client_unique_id, encryption_key, decryption_key, key_derivation_salt, created_at FROM connection_details WHERE "+field+" = ?", value)
+	rows, err := queryWithRetry(r.Db(), "SELECT id, host_unique_id, client_unique_id, encryption_key, decryption_key, key_derivation_salt, created_at FROM connection_details WHERE "+field+" = ?", value)
 	if err != nil {
 		return nil, err
 	}
@@ -90,7 +90,8 @@ func (r *ConnectionDetailsRepository) GetAllBy(field string, value any) ([]*core
 }
 
 func (r *ConnectionDetailsRepository) Create(details *core.ConnectionDetails) error {
-	_, err := r.Db().Exec(
+	_, err := execWithRetry(
+		r.Db(),
 		"INSERT INTO connection_details (host_unique_id, client_unique_id, encryption_key, decryption_key, key_derivation_salt, created_at) VALUES (?, ?, ?, ?, ?, ?)",
 		details.HostUniqueId,
 		details.ClientUniqueId,
@@ -104,7 +105,8 @@ func (r *ConnectionDetailsRepository) Create(details *core.ConnectionDetails) er
 }
 
 func (r *ConnectionDetailsRepository) Update(details *core.ConnectionDetails) error {
-	_, err := r.Db().Exec(
+	_, err := execWithRetry(
+		r.Db(),
 		"UPDATE connection_details SET host_unique_id = ?, client_unique_id = ?, encryption_key = ?, decryption_key = ?, key_derivation_salt = ?, created_at = ? WHERE id = ?",
 		details.HostUniqueId,
 		details.EncryptionKey,
@@ -118,7 +120,7 @@ func (r *ConnectionDetailsRepository) Update(details *core.ConnectionDetails) er
 }
 
 func (r *ConnectionDetailsRepository) Delete(id int) error {
-	_, err := r.Db().Exec("DELETE FROM connection_details WHERE id = ?", id)
+	_, err := execWithRetry(r.Db(), "DELETE FROM connection_details WHERE id = ?", id)
 
 	return err
 }

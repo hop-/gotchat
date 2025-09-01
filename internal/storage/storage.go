@@ -47,6 +47,13 @@ func (s *Storage) Init() error {
 
 	s.db = db
 
+	err = s.configureDatabase()
+	if err != nil {
+		s.db.Close()
+		s.db = nil
+		return err
+	}
+
 	return s.createTables()
 }
 
@@ -118,6 +125,28 @@ func (s *Storage) GetMessageRepository() core.Repository[core.Message] {
 
 func (s *Storage) Name() string {
 	return "Storage"
+}
+
+func (s *Storage) configureDatabase() error {
+	// Enable foreign key constraints
+	_, err := s.db.Exec(`PRAGMA foreign_keys = ON;`)
+	if err != nil {
+		return err
+	}
+
+	// Set journal mode to WAL for better concurrency
+	_, err = s.db.Exec(`PRAGMA journal_mode = WAL;`)
+	if err != nil {
+		return err
+	}
+
+	// Configure busy timeout to handle database locks
+	_, err = s.db.Exec(`PRAGMA busy_timeout = 5000;`) // 5000 milliseconds
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (s *Storage) createTables() error {
@@ -236,16 +265,4 @@ func createMessageTable(db *sql.DB) error {
 	)`)
 
 	return err
-}
-
-func isFieldExist[T core.Entity](field string) bool {
-	fields := core.GetFieldNamesOfEntity[T]()
-
-	for _, filedName := range fields {
-		if filedName == field {
-			return true
-		}
-	}
-
-	return false
 }

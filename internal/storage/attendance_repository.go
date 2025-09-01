@@ -10,8 +10,8 @@ func newAttendanceRepository(storage StorageDb) *AttendanceRepository {
 	return &AttendanceRepository{storage}
 }
 
-func (a *AttendanceRepository) GetOne(id int) (*core.Attendance, error) {
-	row := a.Db().QueryRow("SELECT id, user_id, channel_id, joined_at FROM attendances WHERE id = ?", id)
+func (r *AttendanceRepository) GetOne(id int) (*core.Attendance, error) {
+	row := r.Db().QueryRow("SELECT id, user_id, channel_id, joined_at FROM attendances WHERE id = ?", id)
 	if row == nil {
 		return nil, core.ErrEntityNotFound
 	}
@@ -26,12 +26,12 @@ func (a *AttendanceRepository) GetOne(id int) (*core.Attendance, error) {
 	return &att, nil
 }
 
-func (a *AttendanceRepository) GetOneBy(field string, value any) (*core.Attendance, error) {
+func (r *AttendanceRepository) GetOneBy(field string, value any) (*core.Attendance, error) {
 	if !isFieldExist[core.Attendance](field) {
 		return nil, core.ErrEntityFieldNotExist
 	}
 
-	row := a.Db().QueryRow("SELECT id, user_id, channel_id, joined_at FROM attendances WHERE "+field+" = ?", value)
+	row := r.Db().QueryRow("SELECT id, user_id, channel_id, joined_at FROM attendances WHERE "+field+" = ?", value)
 	if row == nil {
 		return nil, core.ErrEntityNotFound
 	}
@@ -45,8 +45,8 @@ func (a *AttendanceRepository) GetOneBy(field string, value any) (*core.Attendan
 	return &att, nil
 }
 
-func (a *AttendanceRepository) GetAll() ([]*core.Attendance, error) {
-	rows, err := a.Db().Query("SELECT id, user_id, channel_id, joined_at FROM attendances")
+func (r *AttendanceRepository) GetAll() ([]*core.Attendance, error) {
+	rows, err := queryWithRetry(r.Db(), "SELECT id, user_id, channel_id, joined_at FROM attendances")
 	if err != nil {
 		return nil, err
 	}
@@ -65,12 +65,12 @@ func (a *AttendanceRepository) GetAll() ([]*core.Attendance, error) {
 	return attendances, nil
 }
 
-func (a *AttendanceRepository) GetAllBy(field string, value any) ([]*core.Attendance, error) {
+func (r *AttendanceRepository) GetAllBy(field string, value any) ([]*core.Attendance, error) {
 	if !isFieldExist[core.Attendance](field) {
 		return nil, core.ErrEntityFieldNotExist
 	}
 
-	rows, err := a.Db().Query("SELECT id, user_id, channel_id, joined_at FROM attendances WHERE "+field+" = ?", value)
+	rows, err := queryWithRetry(r.Db(), "SELECT id, user_id, channel_id, joined_at FROM attendances WHERE "+field+" = ?", value)
 	if err != nil {
 		return nil, err
 	}
@@ -89,8 +89,9 @@ func (a *AttendanceRepository) GetAllBy(field string, value any) ([]*core.Attend
 	return attendances, nil
 }
 
-func (a *AttendanceRepository) Create(entity *core.Attendance) error {
-	_, err := a.Db().Exec(
+func (r *AttendanceRepository) Create(entity *core.Attendance) error {
+	_, err := execWithRetry(
+		r.Db(),
 		"INSERT INTO attendances (user_id, channel_id, joined_at) VALUES (?, ?, ?)",
 		entity.UserId,
 		entity.ChannelId,
@@ -100,8 +101,9 @@ func (a *AttendanceRepository) Create(entity *core.Attendance) error {
 	return err
 }
 
-func (a *AttendanceRepository) Update(entity *core.Attendance) error {
-	_, err := a.Db().Exec(
+func (r *AttendanceRepository) Update(entity *core.Attendance) error {
+	_, err := execWithRetry(
+		r.Db(),
 		"UPDATE attendances SET user_id = ?, channel_id = ?, joined_at = ? WHERE id = ?",
 		entity.UserId,
 		entity.ChannelId,
@@ -112,8 +114,8 @@ func (a *AttendanceRepository) Update(entity *core.Attendance) error {
 	return err
 }
 
-func (a *AttendanceRepository) Delete(id int) error {
-	_, err := a.Db().Exec("DELETE FROM attendances WHERE id = ?", id)
+func (r *AttendanceRepository) Delete(id int) error {
+	_, err := execWithRetry(r.Db(), "DELETE FROM attendances WHERE id = ?", id)
 
 	return err
 }

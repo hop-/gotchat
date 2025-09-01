@@ -47,7 +47,7 @@ func (r *ChannelRepository) GetOneBy(field string, value any) (*core.Channel, er
 }
 
 func (r *ChannelRepository) GetAll() ([]*core.Channel, error) {
-	rows, err := r.Db().Query("SELECT id, unique_id, name FROM channels")
+	rows, err := queryWithRetry(r.Db(), "SELECT id, unique_id, name FROM channels")
 	if err != nil {
 		return nil, err
 	}
@@ -71,7 +71,7 @@ func (r *ChannelRepository) GetAllBy(field string, value any) ([]*core.Channel, 
 		return nil, core.ErrEntityFieldNotExist
 	}
 
-	rows, err := r.Db().Query("SELECT id, unique_id, name FROM channels where "+field+" = ?", value)
+	rows, err := queryWithRetry(r.Db(), "SELECT id, unique_id, name FROM channels where "+field+" = ?", value)
 	if err != nil {
 		return nil, err
 	}
@@ -91,8 +91,9 @@ func (r *ChannelRepository) GetAllBy(field string, value any) ([]*core.Channel, 
 }
 
 func (r *ChannelRepository) Create(channel *core.Channel) error {
-	_, err := r.Db().Exec(
-		"INSERT INTO channels (unique_id, name) VALUES (?, ?, ?)",
+	_, err := execWithRetry(
+		r.Db(),
+		"INSERT INTO channels (unique_id, name) VALUES (?, ?)",
 		channel.UniqueId,
 		channel.Name,
 	)
@@ -101,7 +102,8 @@ func (r *ChannelRepository) Create(channel *core.Channel) error {
 }
 
 func (r *ChannelRepository) Update(channel *core.Channel) error {
-	_, err := r.Db().Exec(
+	_, err := execWithRetry(
+		r.Db(),
 		"UPDATE channels SET unique_id = ?, name = ? WHERE id = ?",
 		channel.UniqueId,
 		channel.Name,
@@ -112,7 +114,7 @@ func (r *ChannelRepository) Update(channel *core.Channel) error {
 }
 
 func (r *ChannelRepository) Delete(id int) error {
-	_, err := r.Db().Exec("DELETE FROM channels WHERE id = ?", id)
+	_, err := execWithRetry(r.Db(), "DELETE FROM channels WHERE id = ?", id)
 
 	return err
 }

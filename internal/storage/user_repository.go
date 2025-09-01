@@ -47,7 +47,7 @@ func (r *UserRepository) GetOneBy(field string, value any) (*core.User, error) {
 }
 
 func (r *UserRepository) GetAll() ([]*core.User, error) {
-	rows, err := r.Db().Query("SELECT id, unique_id, name, password, last_login FROM users")
+	rows, err := queryWithRetry(r.Db(), "SELECT id, unique_id, name, password, last_login FROM users")
 	if err != nil {
 		return nil, err
 	}
@@ -71,7 +71,7 @@ func (r *UserRepository) GetAllBy(field string, value any) ([]*core.User, error)
 		return nil, core.ErrEntityFieldNotExist
 	}
 
-	rows, err := r.Db().Query("SELECT id, unique_id, name, password, last_login FROM users where "+field+" = ?", value)
+	rows, err := queryWithRetry(r.Db(), "SELECT id, unique_id, name, password, last_login FROM users where "+field+" = ?", value)
 	if err != nil {
 		return nil, err
 	}
@@ -91,7 +91,8 @@ func (r *UserRepository) GetAllBy(field string, value any) ([]*core.User, error)
 }
 
 func (r *UserRepository) Create(user *core.User) error {
-	_, err := r.Db().Exec(
+	_, err := execWithRetry(
+		r.Db(),
 		"INSERT INTO users (unique_id, name, password, last_login) VALUES (?, ?, ?, ?)",
 		user.UniqueId,
 		user.Name,
@@ -103,7 +104,8 @@ func (r *UserRepository) Create(user *core.User) error {
 }
 
 func (r *UserRepository) Update(user *core.User) error {
-	_, err := r.Db().Exec(
+	_, err := execWithRetry(
+		r.Db(),
 		"UPDATE users SET name = ?, password = ?, last_login = ? WHERE id = ?",
 		user.Name,
 		user.Password,
@@ -115,7 +117,7 @@ func (r *UserRepository) Update(user *core.User) error {
 }
 
 func (r *UserRepository) Delete(id int) error {
-	_, err := r.Db().Exec("DELETE FROM users WHERE id = ?", id)
+	_, err := execWithRetry(r.Db(), "DELETE FROM users WHERE id = ?", id)
 
 	return err
 }

@@ -46,7 +46,7 @@ func (r *MessageRepository) GetOneBy(field string, value any) (*core.Message, er
 }
 
 func (r *MessageRepository) GetAll() ([]*core.Message, error) {
-	rows, err := r.Db().Query("SELECT * FROM messages")
+	rows, err := queryWithRetry(r.Db(), "SELECT * FROM messages")
 	if err != nil {
 		return nil, err
 	}
@@ -74,7 +74,7 @@ func (r *MessageRepository) GetAllBy(field string, value any) ([]*core.Message, 
 		return nil, core.ErrEntityFieldNotExist
 	}
 
-	rows, err := r.Db().Query("SELECT * FROM messages WHERE "+field+" = ?", value)
+	rows, err := queryWithRetry(r.Db(), "SELECT * FROM messages WHERE "+field+" = ?", value)
 	if err != nil {
 		return nil, err
 	}
@@ -98,7 +98,8 @@ func (r *MessageRepository) GetAllBy(field string, value any) ([]*core.Message, 
 }
 
 func (r *MessageRepository) Create(entity *core.Message) error {
-	_, err := r.Db().Exec(
+	_, err := execWithRetry(
+		r.Db(),
 		"INSERT INTO messages (user_id, channel_id, text, created_at) VALUES (?, ?, ?, ?)",
 		entity.UserId,
 		entity.ChannelId,
@@ -110,7 +111,8 @@ func (r *MessageRepository) Create(entity *core.Message) error {
 }
 
 func (r *MessageRepository) Update(entity *core.Message) error {
-	_, err := r.Db().Exec(
+	_, err := execWithRetry(
+		r.Db(),
 		"UPDATE messages SET user_id = ?, channel_id = ?, text = ?, created_at = ? WHERE id = ?",
 		entity.UserId,
 		entity.ChannelId,
@@ -123,7 +125,7 @@ func (r *MessageRepository) Update(entity *core.Message) error {
 }
 
 func (r *MessageRepository) Delete(id int) error {
-	_, err := r.Db().Exec("DELETE FROM messages WHERE id = ?", id)
+	_, err := execWithRetry(r.Db(), "DELETE FROM messages WHERE id = ?", id)
 
 	return err
 }

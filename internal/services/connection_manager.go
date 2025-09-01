@@ -401,6 +401,8 @@ func (uc *UserController) handleConnection(connId string, conn *network.Conn, is
 		return
 	}
 
+	log.Infof("Handshake was successful, connection accepted %s", connId)
+
 	// Ensure the connection is upgraded
 	defer secureConn.Close()
 
