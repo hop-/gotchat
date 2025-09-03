@@ -38,6 +38,7 @@ func init() {
 	// Add subcommands
 	rootCmd.AddCommand(appCmd)
 	rootCmd.AddCommand(clientCmd)
+	rootCmd.AddCommand(versionCmd)
 }
 
 func Execute() {
