@@ -2,9 +2,15 @@ package services
 
 import "github.com/hop-/gotchat/pkg/network"
 
-type NewConnection struct {
+type NewUnauthenticatedConnection struct {
 	Id   string
-	Conn *network.Conn
+	Conn network.AdvancedConn
+}
+
+type ConnectionEstablished struct {
+	Id         string
+	Conn       network.AdvancedConn
+	PeerUserId string
 }
 
 type ConnectionClosed struct {
