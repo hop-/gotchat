@@ -292,7 +292,7 @@ func (c *Client) Connect() (*network.Conn, error) {
 	if err != nil {
 		return nil, err
 	}
-	log.Infof("Connected scuccessfully to %s", c.address)
+	log.Infof("Connected successfully to %s", c.address)
 
 	return conn, nil
 }
