@@ -3,119 +3,91 @@ package storage
 import "github.com/hop-/gotchat/internal/core"
 
 type AttendanceRepository struct {
-	StorageDb
+	Repository[Attendance, core.Attendance]
 }
 
 func newAttendanceRepository(storage StorageDb) *AttendanceRepository {
-	return &AttendanceRepository{storage}
+	return &AttendanceRepository{newRepository[Attendance](storage)}
 }
 
-func (r *AttendanceRepository) GetOne(id int) (*core.Attendance, error) {
-	row := r.Db().QueryRow("SELECT id, user_id, channel_id, joined_at FROM attendances WHERE id = ?", id)
-	if row == nil {
-		return nil, core.ErrEntityNotFound
-	}
+func (r *AttendanceRepository) Init() error {
+	return r.Repository.Init()
+}
 
-	var att core.Attendance
-
-	err := row.Scan(&att.Id, &att.UserId, &att.ChannelId, &att.JoinedAt)
+func (r *AttendanceRepository) GetOne(id uint) (*core.Attendance, error) {
+	m, err := r.getOne(id)
 	if err != nil {
 		return nil, err
 	}
 
-	return &att, nil
+	return m.ToEntity(), nil
 }
 
 func (r *AttendanceRepository) GetOneBy(field string, value any) (*core.Attendance, error) {
-	if !isFieldExist[core.Attendance](field) {
+	if !core.IsFieldExist[core.Attendance](field) {
 		return nil, core.ErrEntityFieldNotExist
 	}
 
-	row := r.Db().QueryRow("SELECT id, user_id, channel_id, joined_at FROM attendances WHERE "+field+" = ?", value)
-	if row == nil {
-		return nil, core.ErrEntityNotFound
-	}
-
-	var att core.Attendance
-	err := row.Scan(&att.Id, &att.UserId, &att.ChannelId, &att.JoinedAt)
+	m, err := r.getOneBy(field, value)
 	if err != nil {
 		return nil, err
 	}
 
-	return &att, nil
+	return m.ToEntity(), nil
 }
 
 func (r *AttendanceRepository) GetAll() ([]*core.Attendance, error) {
-	rows, err := queryWithRetry(r.Db(), "SELECT id, user_id, channel_id, joined_at FROM attendances")
+	ms, err := r.getAll()
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
 
-	var attendances []*core.Attendance
-	for rows.Next() {
-		var att core.Attendance
-		err := rows.Scan(&att.Id, &att.UserId, &att.ChannelId, &att.JoinedAt)
-		if err != nil {
-			return nil, err
-		}
-		attendances = append(attendances, &att)
+	var messages []*core.Attendance
+	for _, m := range ms {
+		messages = append(messages, m.ToEntity())
 	}
 
-	return attendances, nil
+	return messages, nil
 }
 
 func (r *AttendanceRepository) GetAllBy(field string, value any) ([]*core.Attendance, error) {
-	if !isFieldExist[core.Attendance](field) {
+	if !core.IsFieldExist[core.Attendance](field) {
 		return nil, core.ErrEntityFieldNotExist
 	}
 
-	rows, err := queryWithRetry(r.Db(), "SELECT id, user_id, channel_id, joined_at FROM attendances WHERE "+field+" = ?", value)
+	ms, err := r.getAllBy(field, value)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
 
-	var attendances []*core.Attendance
-	for rows.Next() {
-		var att core.Attendance
-		err := rows.Scan(&att.Id, &att.UserId, &att.ChannelId, &att.JoinedAt)
-		if err != nil {
-			return nil, err
-		}
-		attendances = append(attendances, &att)
+	var messages []*core.Attendance
+	for _, m := range ms {
+		messages = append(messages, m.ToEntity())
 	}
 
-	return attendances, nil
+	return messages, nil
 }
 
-func (r *AttendanceRepository) Create(entity *core.Attendance) error {
-	_, err := execWithRetry(
-		r.Db(),
-		"INSERT INTO attendances (user_id, channel_id, joined_at) VALUES (?, ?, ?)",
-		entity.UserId,
-		entity.ChannelId,
-		entity.JoinedAt,
-	)
+func (r *AttendanceRepository) Create(entity *core.Attendance) (*core.Attendance, error) {
+	m := FromEntityToAttendance(entity)
+	_, err := r.create(m)
+	if err != nil {
+		return nil, err
+	}
 
-	return err
+	return m.ToEntity(), nil
 }
 
-func (r *AttendanceRepository) Update(entity *core.Attendance) error {
-	_, err := execWithRetry(
-		r.Db(),
-		"UPDATE attendances SET user_id = ?, channel_id = ?, joined_at = ? WHERE id = ?",
-		entity.UserId,
-		entity.ChannelId,
-		entity.JoinedAt,
-		entity.Id,
-	)
+func (r *AttendanceRepository) Update(entity *core.Attendance) (*core.Attendance, error) {
+	m := FromEntityToAttendance(entity)
+	_, err := r.update(m.Id, m)
+	if err != nil {
+		return nil, err
+	}
 
-	return err
+	return m.ToEntity(), nil
 }
 
-func (r *AttendanceRepository) Delete(id int) error {
-	_, err := execWithRetry(r.Db(), "DELETE FROM attendances WHERE id = ?", id)
-
-	return err
+func (r *AttendanceRepository) Delete(id uint) error {
+	return r.delete(id)
 }

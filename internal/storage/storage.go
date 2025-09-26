@@ -2,45 +2,50 @@ package storage
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"sync"
 
 	"github.com/hop-/gotchat/internal/core"
-	_ "modernc.org/sqlite" // SQLite driver
+	"gorm.io/driver/sqlite"
+	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 )
 
 type StorageDb interface {
-	Db() *sql.DB
+	Db() *gorm.DB
 }
 
 type Storage struct {
 	path string
-	db   *sql.DB
+	db   *gorm.DB
 
 	// Repositories
-	userRepo       core.Repository[core.User]
-	channelRepo    core.Repository[core.Channel]
-	attendanceRepo core.Repository[core.Attendance]
-	messageRepo    core.Repository[core.Message]
-	connectionRepo core.Repository[core.ConnectionDetails]
+	accountRepository GormRepo[Account, core.Account]
+	userRepo          GormRepo[User, core.User]
+	channelRepo       GormRepo[Channel, core.Channel]
+	attendanceRepo    GormRepo[Attendance, core.Attendance]
+	messageRepo       GormRepo[Message, core.Message]
+	connectionRepo    GormRepo[ConnectionDetails, core.ConnectionDetails]
 }
 
 func NewStorage(path string) *Storage {
-	return &Storage{path, nil, nil, nil, nil, nil, nil}
+	return &Storage{path: path}
 }
 
-func (s *Storage) Db() *sql.DB {
+func (s *Storage) Db() *gorm.DB {
 	return s.db
 }
 
 func (s *Storage) Init() error {
-	// Start the server
+	// Start the service
 	if s.db != nil {
 		return fmt.Errorf("server is already running")
 	}
 
-	db, err := sql.Open("sqlite", s.path)
+	db, err := gorm.Open(sqlite.Open(s.path), &gorm.Config{
+		// Silent logger
+		Logger: logger.Default.LogMode(logger.Silent),
+	})
 	if err != nil {
 		return err
 	}
@@ -49,12 +54,22 @@ func (s *Storage) Init() error {
 
 	err = s.configureDatabase()
 	if err != nil {
-		s.db.Close()
 		s.db = nil
+
 		return err
 	}
 
-	return s.createTables()
+	s.db.AutoMigrate(&User{}, &Account{}, &ConnectionDetails{}, &Channel{}, &Attendance{}, &Message{})
+
+	// Initialize repositories
+	err = s.initRepositories()
+	if err != nil {
+		s.db = nil
+
+		return err
+	}
+
+	return nil
 }
 
 func (s *Storage) Run(ctx context.Context, wg *sync.WaitGroup) {
@@ -73,14 +88,17 @@ func (s *Storage) Close() error {
 	if s.db == nil {
 		return nil
 	}
+	s.db = nil
 
-	err := s.db.Close()
-	if err != nil {
-		return err
+	return nil
+}
+
+func (s *Storage) GetAccountRepository() core.Repository[core.Account] {
+	if s.accountRepository == nil {
+		s.accountRepository = newAccountRepository(s)
 	}
 
-	s.db = nil
-	return nil
+	return s.accountRepository
 }
 
 func (s *Storage) GetUserRepository() core.Repository[core.User] {
@@ -128,20 +146,25 @@ func (s *Storage) Name() string {
 }
 
 func (s *Storage) configureDatabase() error {
+	db, err := s.db.DB()
+	if err != nil {
+		return err
+	}
+
 	// Enable foreign key constraints
-	_, err := s.db.Exec(`PRAGMA foreign_keys = ON;`)
+	_, err = db.Exec(`PRAGMA foreign_keys = ON;`)
 	if err != nil {
 		return err
 	}
 
 	// Set journal mode to WAL for better concurrency
-	_, err = s.db.Exec(`PRAGMA journal_mode = WAL;`)
+	_, err = db.Exec(`PRAGMA journal_mode = WAL;`)
 	if err != nil {
 		return err
 	}
 
 	// Configure busy timeout to handle database locks
-	_, err = s.db.Exec(`PRAGMA busy_timeout = 5000;`) // 5000 milliseconds
+	_, err = db.Exec(`PRAGMA busy_timeout = 5000;`) // 5000 milliseconds
 	if err != nil {
 		return err
 	}
@@ -149,120 +172,45 @@ func (s *Storage) configureDatabase() error {
 	return nil
 }
 
-func (s *Storage) createTables() error {
-	err := createUserTable(s.db)
+func (s *Storage) initRepositories() error {
+	// Initialize all repositories
+	s.GetUserRepository()
+	s.GetAccountRepository()
+	s.GetConnectionDetailsRepository()
+	s.GetChannelRepository()
+	s.GetAttendanceRepository()
+	s.GetMessageRepository()
+
+	// Call Init on each repository and handle errors
+	err := s.userRepo.Init()
 	if err != nil {
 		return err
 	}
 
-	err = createConnectionDetailsTable(s.db)
+	err = s.accountRepository.Init()
 	if err != nil {
 		return err
 	}
 
-	err = createChannelTable(s.db)
+	err = s.connectionRepo.Init()
 	if err != nil {
 		return err
 	}
 
-	err = createAttendanceTable(s.db)
+	err = s.channelRepo.Init()
 	if err != nil {
 		return err
 	}
 
-	err = createMessageTable(s.db)
+	err = s.attendanceRepo.Init()
+	if err != nil {
+		return err
+	}
+
+	err = s.messageRepo.Init()
 	if err != nil {
 		return err
 	}
 
 	return nil
-}
-
-func createUserTable(db *sql.DB) error {
-	// Create the users table if it doesn't exist
-	_, err := db.Exec(`
-	CREATE TABLE IF NOT EXISTS users (
-		id INTEGER PRIMARY KEY AUTOINCREMENT,
-		unique_id TEXT UNIQUE,
-		name TEXT NOT NULL,
-		password TEXT NOT NULL,
-		last_login DATETIME DEFAULT CURRENT_TIMESTAMP
-	)`)
-
-	return err
-}
-
-func createConnectionDetailsTable(db *sql.DB) error {
-	// Create the connection_details table if it doesn't exist
-	_, err := db.Exec(`
-	CREATE TABLE IF NOT EXISTS connection_details (
-		id INTEGER PRIMARY KEY AUTOINCREMENT,
-		host_unique_id TEXT UNIQUE,
-		client_unique_id TEXT UNIQUE,
-		encryption_key TEXT NOT NULL,
-		decryption_key TEXT NOT NULL,
-		key_derivation_salt TEXT NOT NULL,
-		created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-	)`)
-
-	if err != nil {
-		return err
-	}
-
-	// Create an index on the host_unique_id and client_unique_id
-	_, err = db.Exec(`
-	CREATE UNIQUE INDEX IF NOT EXISTS uniq_connection_details_host_client ON connection_details (host_unique_id, client_unique_id)`)
-
-	return err
-}
-
-func createChannelTable(db *sql.DB) error {
-	// Create the channels table if it doesn't exist
-	_, err := db.Exec(`
-	CREATE TABLE IF NOT EXISTS channels (
-		id INTEGER PRIMARY KEY AUTOINCREMENT,
-		unique_id TEXT UNIQUE,
-		name TEXT
-	)`)
-
-	return err
-}
-
-func createAttendanceTable(db *sql.DB) error {
-	// Create the attendance table if it doesn't exist
-	_, err := db.Exec(`
-	CREATE TABLE IF NOT EXISTS attendances (
-		id INTEGER PRIMARY KEY AUTOINCREMENT,
-		user_id INTEGER,
-		channel_id INTEGER,
-		joined_at DATETIME,
-		FOREIGN KEY (user_id) REFERENCES users(id),
-		FOREIGN KEY (channel_id) REFERENCES channels(id)
-	)`)
-
-	if err != nil {
-		return err
-	}
-
-	// Create an index on the user_id and channel_id columns for faster lookups
-	_, err = db.Exec(`
-	CREATE INDEX IF NOT EXISTS idx_attendance_user_channel ON attendances (user_id, channel_id)`)
-
-	return err
-}
-
-func createMessageTable(db *sql.DB) error {
-	// Create the messages table if it doesn't exist
-	_, err := db.Exec(`
-	CREATE TABLE IF NOT EXISTS messages (
-		id INTEGER PRIMARY KEY AUTOINCREMENT,
-		user_id INTEGER,
-		channel_id INTEGER,
-		content TEXT NOT NULL,
-		timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-		FOREIGN KEY (user_id) REFERENCES users(id),
-		FOREIGN KEY (channel_id) REFERENCES channels(id)
-	)`)
-
-	return err
 }

@@ -37,3 +37,16 @@ func (r *RemoveUserController) Execute(ctx context.Context) ([]core.Event, error
 
 	return nil, nil
 }
+
+type ActivateOrCreateChat struct {
+	cm     *ChatManager
+	userId string
+}
+
+func (a *ActivateOrCreateChat) Execute(ctx context.Context) ([]core.Event, error) {
+	var events []core.Event
+
+	// Implementation for activating or creating a chat
+
+	return events, nil
+}

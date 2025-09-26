@@ -192,12 +192,12 @@ func (m *ConnectionDetailsManager) UpsertConnectionDetails(host string, client s
 			return nil, err
 		}
 
-		err = m.repo.Create(details)
+		created, err := m.repo.Create(details)
 		if err != nil {
 			return nil, err
 		}
 
-		return newConnectionDetailsFromEntity(m.mk, details)
+		return newConnectionDetailsFromEntity(m.mk, created)
 	}
 
 	// Update existing details
@@ -206,12 +206,12 @@ func (m *ConnectionDetailsManager) UpsertConnectionDetails(host string, client s
 		return nil, err
 	}
 
-	err = m.repo.Update(details)
+	updated, err := m.repo.Update(details)
 	if err != nil {
 		return nil, err
 	}
 
-	return newConnectionDetailsFromEntity(m.mk, details)
+	return newConnectionDetailsFromEntity(m.mk, updated)
 }
 
 func (m *ConnectionDetailsManager) RemoveConnectionDetails(host string, client string) error {
@@ -229,7 +229,7 @@ func (m *ConnectionDetailsManager) RemoveConnectionDetails(host string, client s
 
 func (m *ConnectionDetailsManager) getConnectionDetails(host string, client string) (*core.ConnectionDetails, error) {
 	// TODO: use better approach when available (GetOneWhere, GetOneByMany, etc.)
-	detailsList, err := m.repo.GetAllBy("host_unique_id", host)
+	detailsList, err := m.repo.GetAllBy("HostUniqueId", host)
 	if err != nil {
 		if err == core.ErrEntityNotFound {
 			return nil, nil

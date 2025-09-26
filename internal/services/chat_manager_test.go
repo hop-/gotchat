@@ -207,7 +207,8 @@ func TestChatManager_GetChatsByUserId_ChannelError(t *testing.T) {
 func TestChatManager_GetChatMessagesByChatId_Success(t *testing.T) {
 	eventEmitter := core.NewMockEventEmitter(t)
 	userRepo := core.NewMockRepository[core.User](t)
-	userManager := NewUserManager(eventEmitter, userRepo)
+	accountRepo := core.NewMockRepository[core.Account](t)
+	userManager := NewUserManager(eventEmitter, userRepo, accountRepo)
 
 	channelRepo := core.NewMockRepository[core.Channel](t)
 	attendanceRepo := core.NewMockRepository[core.Attendance](t)
@@ -227,14 +228,14 @@ func TestChatManager_GetChatMessagesByChatId_Success(t *testing.T) {
 			BaseEntity: core.BaseEntity{Id: 1},
 			UserId:     1,
 			ChannelId:  10,
-			Text:       "Hello world!",
+			Content:    "Hello world!",
 			CreatedAt:  time.Now().Add(-2 * time.Hour),
 		},
 		{
 			BaseEntity: core.BaseEntity{Id: 2},
 			UserId:     2,
 			ChannelId:  10,
-			Text:       "How are you?",
+			Content:    "How are you?",
 			CreatedAt:  time.Now().Add(-1 * time.Hour),
 		},
 	}
@@ -341,7 +342,8 @@ func TestChatManager_GetChatMessagesByChatId_MessageError(t *testing.T) {
 func TestChatManager_GetChatMessagesByChatId_UserError(t *testing.T) {
 	eventEmitter := core.NewMockEventEmitter(t)
 	userRepo := core.NewMockRepository[core.User](t)
-	userManager := NewUserManager(eventEmitter, userRepo)
+	accountRepo := core.NewMockRepository[core.Account](t)
+	userManager := NewUserManager(eventEmitter, userRepo, accountRepo)
 
 	channelRepo := core.NewMockRepository[core.Channel](t)
 	attendanceRepo := core.NewMockRepository[core.Attendance](t)
@@ -361,7 +363,7 @@ func TestChatManager_GetChatMessagesByChatId_UserError(t *testing.T) {
 			BaseEntity: core.BaseEntity{Id: 1},
 			UserId:     999, // Non-existent user
 			ChannelId:  10,
-			Text:       "Hello world!",
+			Content:    "Hello world!",
 			CreatedAt:  time.Now(),
 		},
 	}

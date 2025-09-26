@@ -65,18 +65,24 @@ func (cm *ChatManager) Close() error {
 
 func (cm *ChatManager) MapEventToCommands(event core.Event) []core.Command {
 	// TODO
-	return nil
+	var commands []core.Command
+	switch e := event.(type) {
+	case ConnectionEstablished:
+		commands = append(commands, &ActivateOrCreateChat{cm, e.PeerUserId})
+	}
+
+	return commands
 }
 
-func (cm *ChatManager) GetChatsByUserId(userId int) ([]Chat, error) {
-	attendatnces, err := cm.attendanceRepo.GetAllBy("user_id", userId)
+func (cm *ChatManager) GetChatsByUserId(userId uint) ([]Chat, error) {
+	attendatnces, err := cm.attendanceRepo.GetAllBy("UserId", userId)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get attendances: %s", err.Error())
 	}
 
 	chats := make([]Chat, 0, len(attendatnces))
 	for _, attendance := range attendatnces {
-		channel, err := cm.channelRepo.GetOneBy("unique_id", attendance.ChannelId)
+		channel, err := cm.channelRepo.GetOneBy("UniqueId", attendance.ChannelId)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get channel: %s", err.Error())
 		}
@@ -88,12 +94,12 @@ func (cm *ChatManager) GetChatsByUserId(userId int) ([]Chat, error) {
 }
 
 func (cm *ChatManager) GetChatMessagesByChatId(chatId string) ([]ChatMessage, error) {
-	chat, err := cm.channelRepo.GetOneBy("unique_id", chatId)
+	chat, err := cm.channelRepo.GetOneBy("UniqueId", chatId)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get channel: %s", err.Error())
 	}
 
-	messages, err := cm.messageRepo.GetAllBy("channel_id", chat.Id)
+	messages, err := cm.messageRepo.GetAllBy("ChannelId", chat.Id)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get messages: %s", err.Error())
 	}
@@ -108,7 +114,7 @@ func (cm *ChatManager) GetChatMessagesByChatId(chatId string) ([]ChatMessage, er
 
 		chatMessages = append(chatMessages, ChatMessage{
 			Member: user.Name,
-			Text:   message.Text,
+			Text:   message.Content,
 			At:     message.CreatedAt,
 		})
 	}

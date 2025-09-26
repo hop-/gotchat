@@ -5,127 +5,91 @@ import (
 )
 
 type MessageRepository struct {
-	StorageDb
+	Repository[Message, core.Message]
 }
 
 func newMessageRepository(storage StorageDb) *MessageRepository {
-	return &MessageRepository{storage}
+	return &MessageRepository{newRepository[Message](storage)}
 }
 
-func (r *MessageRepository) GetOne(id int) (*core.Message, error) {
-	row := r.Db().QueryRow("SELECT * FROM messages WHERE id = ?", id)
-	if row == nil {
-		return nil, core.ErrEntityNotFound
-	}
-	var message core.Message
-	err := row.Scan(&message.Id, &message.UserId, &message.ChannelId, &message.Text, &message.CreatedAt)
+func (r *MessageRepository) Init() error {
+	return r.Repository.Init()
+}
+
+func (r *MessageRepository) GetOne(id uint) (*core.Message, error) {
+	m, err := r.getOne(id)
 	if err != nil {
 		return nil, err
 	}
 
-	return &message, nil
+	return m.ToEntity(), nil
 }
 
 func (r *MessageRepository) GetOneBy(field string, value any) (*core.Message, error) {
-	if !isFieldExist[core.Channel](field) {
+	if !core.IsFieldExist[core.Message](field) {
 		return nil, core.ErrEntityFieldNotExist
 	}
 
-	row := r.Db().QueryRow("SELECT * FROM messages WHERE "+field+" = ?", value)
-	if row == nil {
-		return nil, core.ErrEntityNotFound
-	}
-
-	var message core.Message
-	err := row.Scan(&message.Id, &message.UserId, &message.ChannelId, &message.Text, &message.CreatedAt)
+	m, err := r.getOneBy(field, value)
 	if err != nil {
 		return nil, err
 	}
 
-	return &message, nil
+	return m.ToEntity(), nil
 }
 
 func (r *MessageRepository) GetAll() ([]*core.Message, error) {
-	rows, err := queryWithRetry(r.Db(), "SELECT * FROM messages")
+	ms, err := r.getAll()
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
 
 	var messages []*core.Message
-	for rows.Next() {
-		var message core.Message
-		err := rows.Scan(&message.Id, &message.UserId, &message.ChannelId, &message.Text, &message.CreatedAt)
-		if err != nil {
-			return nil, err
-		}
-		messages = append(messages, &message)
-	}
-
-	if err := rows.Err(); err != nil {
-		return nil, err
+	for _, m := range ms {
+		messages = append(messages, m.ToEntity())
 	}
 
 	return messages, nil
 }
 
 func (r *MessageRepository) GetAllBy(field string, value any) ([]*core.Message, error) {
-	if !isFieldExist[core.Channel](field) {
+	if !core.IsFieldExist[core.Message](field) {
 		return nil, core.ErrEntityFieldNotExist
 	}
 
-	rows, err := queryWithRetry(r.Db(), "SELECT * FROM messages WHERE "+field+" = ?", value)
+	ms, err := r.getAllBy(field, value)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
 
 	var messages []*core.Message
-	for rows.Next() {
-		var message core.Message
-		err := rows.Scan(&message.Id, &message.UserId, &message.ChannelId, &message.Text, &message.CreatedAt)
-		if err != nil {
-			return nil, err
-		}
-		messages = append(messages, &message)
-	}
-
-	if err := rows.Err(); err != nil {
-		return nil, err
+	for _, m := range ms {
+		messages = append(messages, m.ToEntity())
 	}
 
 	return messages, nil
 }
 
-func (r *MessageRepository) Create(entity *core.Message) error {
-	_, err := execWithRetry(
-		r.Db(),
-		"INSERT INTO messages (user_id, channel_id, text, created_at) VALUES (?, ?, ?, ?)",
-		entity.UserId,
-		entity.ChannelId,
-		entity.Text,
-		entity.CreatedAt,
-	)
+func (r *MessageRepository) Create(entity *core.Message) (*core.Message, error) {
+	m := FromEntityToMessage(entity)
+	_, err := r.create(m)
+	if err != nil {
+		return nil, err
+	}
 
-	return err
+	return m.ToEntity(), nil
 }
 
-func (r *MessageRepository) Update(entity *core.Message) error {
-	_, err := execWithRetry(
-		r.Db(),
-		"UPDATE messages SET user_id = ?, channel_id = ?, text = ?, created_at = ? WHERE id = ?",
-		entity.UserId,
-		entity.ChannelId,
-		entity.Text,
-		entity.CreatedAt,
-		entity.Id,
-	)
+func (r *MessageRepository) Update(entity *core.Message) (*core.Message, error) {
+	m := FromEntityToMessage(entity)
+	_, err := r.update(m.Id, m)
+	if err != nil {
+		return nil, err
+	}
 
-	return err
+	return m.ToEntity(), nil
 }
 
-func (r *MessageRepository) Delete(id int) error {
-	_, err := execWithRetry(r.Db(), "DELETE FROM messages WHERE id = ?", id)
-
-	return err
+func (r *MessageRepository) Delete(id uint) error {
+	return r.delete(id)
 }

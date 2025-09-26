@@ -104,7 +104,7 @@ func (m *UsersListModel) View() string {
 }
 
 func (m *UsersListModel) getUsers() []list.Item {
-	users, err := m.userManager.GetAllUsers()
+	users, err := m.userManager.GetAllAccountUsers()
 	if err != nil {
 		m.Frame.AddError(err.Error())
 		return nil
@@ -112,10 +112,16 @@ func (m *UsersListModel) getUsers() []list.Item {
 
 	items := make([]list.Item, len(users))
 	for i, user := range users {
+		account, err := m.userManager.GetAccountByUser(user)
+		if err != nil {
+			m.Frame.AddError(err.Error())
+			return nil
+		}
+
 		items[i] = User{
 			id:        user.UniqueId,
 			name:      user.Name,
-			lastLogin: FormatLastLogin(user.LastLogin),
+			lastLogin: FormatLastLogin(account.LastLogin),
 		}
 	}
 
