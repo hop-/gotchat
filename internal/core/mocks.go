@@ -128,18 +128,18 @@ func (_m *MockEntity) EXPECT() *MockEntity_Expecter {
 }
 
 // GetId provides a mock function for the type MockEntity
-func (_mock *MockEntity) GetId() int {
+func (_mock *MockEntity) GetId() uint {
 	ret := _mock.Called()
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetId")
 	}
 
-	var r0 int
-	if returnFunc, ok := ret.Get(0).(func() int); ok {
+	var r0 uint
+	if returnFunc, ok := ret.Get(0).(func() uint); ok {
 		r0 = returnFunc()
 	} else {
-		r0 = ret.Get(0).(int)
+		r0 = ret.Get(0).(uint)
 	}
 	return r0
 }
@@ -161,12 +161,12 @@ func (_c *MockEntity_GetId_Call) Run(run func()) *MockEntity_GetId_Call {
 	return _c
 }
 
-func (_c *MockEntity_GetId_Call) Return(n int) *MockEntity_GetId_Call {
-	_c.Call.Return(n)
+func (_c *MockEntity_GetId_Call) Return(v uint) *MockEntity_GetId_Call {
+	_c.Call.Return(v)
 	return _c
 }
 
-func (_c *MockEntity_GetId_Call) RunAndReturn(run func() int) *MockEntity_GetId_Call {
+func (_c *MockEntity_GetId_Call) RunAndReturn(run func() uint) *MockEntity_GetId_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -453,20 +453,31 @@ func (_m *MockRepository[T]) EXPECT() *MockRepository_Expecter[T] {
 }
 
 // Create provides a mock function for the type MockRepository
-func (_mock *MockRepository[T]) Create(entity *T) error {
+func (_mock *MockRepository[T]) Create(entity *T) (*T, error) {
 	ret := _mock.Called(entity)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Create")
 	}
 
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(*T) error); ok {
+	var r0 *T
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(*T) (*T, error)); ok {
+		return returnFunc(entity)
+	}
+	if returnFunc, ok := ret.Get(0).(func(*T) *T); ok {
 		r0 = returnFunc(entity)
 	} else {
-		r0 = ret.Error(0)
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*T)
+		}
 	}
-	return r0
+	if returnFunc, ok := ret.Get(1).(func(*T) error); ok {
+		r1 = returnFunc(entity)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
 }
 
 // MockRepository_Create_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Create'
@@ -493,18 +504,18 @@ func (_c *MockRepository_Create_Call[T]) Run(run func(entity *T)) *MockRepositor
 	return _c
 }
 
-func (_c *MockRepository_Create_Call[T]) Return(err error) *MockRepository_Create_Call[T] {
-	_c.Call.Return(err)
+func (_c *MockRepository_Create_Call[T]) Return(v *T, err error) *MockRepository_Create_Call[T] {
+	_c.Call.Return(v, err)
 	return _c
 }
 
-func (_c *MockRepository_Create_Call[T]) RunAndReturn(run func(entity *T) error) *MockRepository_Create_Call[T] {
+func (_c *MockRepository_Create_Call[T]) RunAndReturn(run func(entity *T) (*T, error)) *MockRepository_Create_Call[T] {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Delete provides a mock function for the type MockRepository
-func (_mock *MockRepository[T]) Delete(id int) error {
+func (_mock *MockRepository[T]) Delete(id uint) error {
 	ret := _mock.Called(id)
 
 	if len(ret) == 0 {
@@ -512,7 +523,7 @@ func (_mock *MockRepository[T]) Delete(id int) error {
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(int) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(uint) error); ok {
 		r0 = returnFunc(id)
 	} else {
 		r0 = ret.Error(0)
@@ -526,16 +537,16 @@ type MockRepository_Delete_Call[T Entity] struct {
 }
 
 // Delete is a helper method to define mock.On call
-//   - id int
+//   - id uint
 func (_e *MockRepository_Expecter[T]) Delete(id interface{}) *MockRepository_Delete_Call[T] {
 	return &MockRepository_Delete_Call[T]{Call: _e.mock.On("Delete", id)}
 }
 
-func (_c *MockRepository_Delete_Call[T]) Run(run func(id int)) *MockRepository_Delete_Call[T] {
+func (_c *MockRepository_Delete_Call[T]) Run(run func(id uint)) *MockRepository_Delete_Call[T] {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 int
+		var arg0 uint
 		if args[0] != nil {
-			arg0 = args[0].(int)
+			arg0 = args[0].(uint)
 		}
 		run(
 			arg0,
@@ -549,7 +560,7 @@ func (_c *MockRepository_Delete_Call[T]) Return(err error) *MockRepository_Delet
 	return _c
 }
 
-func (_c *MockRepository_Delete_Call[T]) RunAndReturn(run func(id int) error) *MockRepository_Delete_Call[T] {
+func (_c *MockRepository_Delete_Call[T]) RunAndReturn(run func(id uint) error) *MockRepository_Delete_Call[T] {
 	_c.Call.Return(run)
 	return _c
 }
@@ -678,7 +689,7 @@ func (_c *MockRepository_GetAllBy_Call[T]) RunAndReturn(run func(field string, v
 }
 
 // GetOne provides a mock function for the type MockRepository
-func (_mock *MockRepository[T]) GetOne(id int) (*T, error) {
+func (_mock *MockRepository[T]) GetOne(id uint) (*T, error) {
 	ret := _mock.Called(id)
 
 	if len(ret) == 0 {
@@ -687,17 +698,17 @@ func (_mock *MockRepository[T]) GetOne(id int) (*T, error) {
 
 	var r0 *T
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(int) (*T, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(uint) (*T, error)); ok {
 		return returnFunc(id)
 	}
-	if returnFunc, ok := ret.Get(0).(func(int) *T); ok {
+	if returnFunc, ok := ret.Get(0).(func(uint) *T); ok {
 		r0 = returnFunc(id)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*T)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(int) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(uint) error); ok {
 		r1 = returnFunc(id)
 	} else {
 		r1 = ret.Error(1)
@@ -711,16 +722,16 @@ type MockRepository_GetOne_Call[T Entity] struct {
 }
 
 // GetOne is a helper method to define mock.On call
-//   - id int
+//   - id uint
 func (_e *MockRepository_Expecter[T]) GetOne(id interface{}) *MockRepository_GetOne_Call[T] {
 	return &MockRepository_GetOne_Call[T]{Call: _e.mock.On("GetOne", id)}
 }
 
-func (_c *MockRepository_GetOne_Call[T]) Run(run func(id int)) *MockRepository_GetOne_Call[T] {
+func (_c *MockRepository_GetOne_Call[T]) Run(run func(id uint)) *MockRepository_GetOne_Call[T] {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 int
+		var arg0 uint
 		if args[0] != nil {
-			arg0 = args[0].(int)
+			arg0 = args[0].(uint)
 		}
 		run(
 			arg0,
@@ -734,7 +745,7 @@ func (_c *MockRepository_GetOne_Call[T]) Return(v *T, err error) *MockRepository
 	return _c
 }
 
-func (_c *MockRepository_GetOne_Call[T]) RunAndReturn(run func(id int) (*T, error)) *MockRepository_GetOne_Call[T] {
+func (_c *MockRepository_GetOne_Call[T]) RunAndReturn(run func(id uint) (*T, error)) *MockRepository_GetOne_Call[T] {
 	_c.Call.Return(run)
 	return _c
 }
@@ -808,20 +819,31 @@ func (_c *MockRepository_GetOneBy_Call[T]) RunAndReturn(run func(field string, v
 }
 
 // Update provides a mock function for the type MockRepository
-func (_mock *MockRepository[T]) Update(entity *T) error {
+func (_mock *MockRepository[T]) Update(entity *T) (*T, error) {
 	ret := _mock.Called(entity)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Update")
 	}
 
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(*T) error); ok {
+	var r0 *T
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(*T) (*T, error)); ok {
+		return returnFunc(entity)
+	}
+	if returnFunc, ok := ret.Get(0).(func(*T) *T); ok {
 		r0 = returnFunc(entity)
 	} else {
-		r0 = ret.Error(0)
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*T)
+		}
 	}
-	return r0
+	if returnFunc, ok := ret.Get(1).(func(*T) error); ok {
+		r1 = returnFunc(entity)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
 }
 
 // MockRepository_Update_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Update'
@@ -848,12 +870,12 @@ func (_c *MockRepository_Update_Call[T]) Run(run func(entity *T)) *MockRepositor
 	return _c
 }
 
-func (_c *MockRepository_Update_Call[T]) Return(err error) *MockRepository_Update_Call[T] {
-	_c.Call.Return(err)
+func (_c *MockRepository_Update_Call[T]) Return(v *T, err error) *MockRepository_Update_Call[T] {
+	_c.Call.Return(v, err)
 	return _c
 }
 
-func (_c *MockRepository_Update_Call[T]) RunAndReturn(run func(entity *T) error) *MockRepository_Update_Call[T] {
+func (_c *MockRepository_Update_Call[T]) RunAndReturn(run func(entity *T) (*T, error)) *MockRepository_Update_Call[T] {
 	_c.Call.Return(run)
 	return _c
 }

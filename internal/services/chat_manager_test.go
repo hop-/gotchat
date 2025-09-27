@@ -85,7 +85,7 @@ func TestChatManager_GetChatsByUserId_Success(t *testing.T) {
 
 	cm := NewChatManager(userManager, channelRepo, attendanceRepo, messageRepo)
 
-	userId := 1
+	userId := uint(1)
 	attendances := []*core.Attendance{
 		{
 			BaseEntity: core.BaseEntity{Id: 1},
@@ -115,9 +115,9 @@ func TestChatManager_GetChatsByUserId_Success(t *testing.T) {
 	}
 
 	// Setup mock expectations
-	attendanceRepo.On("GetAllBy", "user_id", userId).Return(attendances, nil)
-	channelRepo.On("GetOneBy", "unique_id", mock.Anything).Return(channels[0], nil).Once()
-	channelRepo.On("GetOneBy", "unique_id", mock.Anything).Return(channels[1], nil).Once()
+	attendanceRepo.On("GetAllBy", "UserId", userId).Return(attendances, nil)
+	channelRepo.On("GetOneBy", "UniqueId", mock.Anything).Return(channels[0], nil).Once()
+	channelRepo.On("GetOneBy", "UniqueId", mock.Anything).Return(channels[1], nil).Once()
 
 	chats, err := cm.GetChatsByUserId(userId)
 
@@ -149,11 +149,11 @@ func TestChatManager_GetChatsByUserId_AttendanceError(t *testing.T) {
 
 	cm := NewChatManager(userManager, channelRepo, attendanceRepo, messageRepo)
 
-	userId := 1
+	userId := uint(1)
 	expectedError := fmt.Errorf("database error")
 
 	// Setup mock expectations
-	attendanceRepo.On("GetAllBy", "user_id", userId).Return(nil, expectedError)
+	attendanceRepo.On("GetAllBy", "UserId", userId).Return(nil, expectedError)
 
 	chats, err := cm.GetChatsByUserId(userId)
 
@@ -176,7 +176,7 @@ func TestChatManager_GetChatsByUserId_ChannelError(t *testing.T) {
 
 	cm := NewChatManager(userManager, channelRepo, attendanceRepo, messageRepo)
 
-	userId := 1
+	userId := uint(1)
 	attendances := []*core.Attendance{
 		{
 			BaseEntity: core.BaseEntity{Id: 1},
@@ -188,8 +188,8 @@ func TestChatManager_GetChatsByUserId_ChannelError(t *testing.T) {
 	expectedError := fmt.Errorf("channel not found")
 
 	// Setup mock expectations
-	attendanceRepo.On("GetAllBy", "user_id", userId).Return(attendances, nil)
-	channelRepo.On("GetOneBy", "unique_id", mock.Anything).Return(nil, expectedError)
+	attendanceRepo.On("GetAllBy", "UserId", userId).Return(attendances, nil)
+	channelRepo.On("GetOneBy", "UniqueId", mock.Anything).Return(nil, expectedError)
 
 	chats, err := cm.GetChatsByUserId(userId)
 
@@ -252,10 +252,10 @@ func TestChatManager_GetChatMessagesByChatId_Success(t *testing.T) {
 	}
 
 	// Setup mock expectations
-	channelRepo.On("GetOneBy", "unique_id", chatId).Return(channel, nil)
-	messageRepo.On("GetAllBy", "channel_id", 10).Return(messages, nil)
-	userRepo.On("GetOne", 1).Return(users[0], nil)
-	userRepo.On("GetOne", 2).Return(users[1], nil)
+	channelRepo.On("GetOneBy", "UniqueId", chatId).Return(channel, nil)
+	messageRepo.On("GetAllBy", "ChannelId", uint(10)).Return(messages, nil)
+	userRepo.On("GetOne", uint(1)).Return(users[0], nil)
+	userRepo.On("GetOne", uint(2)).Return(users[1], nil)
 
 	chatMessages, err := cm.GetChatMessagesByChatId(chatId)
 
@@ -291,7 +291,7 @@ func TestChatManager_GetChatMessagesByChatId_ChannelError(t *testing.T) {
 	expectedError := fmt.Errorf("channel not found")
 
 	// Setup mock expectations
-	channelRepo.On("GetOneBy", "unique_id", chatId).Return(nil, expectedError)
+	channelRepo.On("GetOneBy", "UniqueId", chatId).Return(nil, expectedError)
 
 	chatMessages, err := cm.GetChatMessagesByChatId(chatId)
 
@@ -323,8 +323,8 @@ func TestChatManager_GetChatMessagesByChatId_MessageError(t *testing.T) {
 	expectedError := fmt.Errorf("database error")
 
 	// Setup mock expectations
-	channelRepo.On("GetOneBy", "unique_id", chatId).Return(channel, nil)
-	messageRepo.On("GetAllBy", "channel_id", 10).Return(nil, expectedError)
+	channelRepo.On("GetOneBy", "UniqueId", chatId).Return(channel, nil)
+	messageRepo.On("GetAllBy", "ChannelId", uint(10)).Return(nil, expectedError)
 
 	chatMessages, err := cm.GetChatMessagesByChatId(chatId)
 
@@ -368,10 +368,12 @@ func TestChatManager_GetChatMessagesByChatId_UserError(t *testing.T) {
 		},
 	}
 
+	expectedError := fmt.Errorf("user not found")
+
 	// Setup mock expectations
-	channelRepo.On("GetOneBy", "unique_id", chatId).Return(channel, nil)
-	messageRepo.On("GetAllBy", "channel_id", 10).Return(messages, nil)
-	userRepo.On("GetOne", 999).Return((*core.User)(nil), nil)
+	channelRepo.On("GetOneBy", "UniqueId", chatId).Return(channel, nil)
+	messageRepo.On("GetAllBy", "ChannelId", uint(10)).Return(messages, nil)
+	userRepo.On("GetOne", uint(999)).Return((*core.User)(nil), expectedError)
 
 	chatMessages, err := cm.GetChatMessagesByChatId(chatId)
 
@@ -379,9 +381,9 @@ func TestChatManager_GetChatMessagesByChatId_UserError(t *testing.T) {
 		t.Error("Expected error, got nil")
 	}
 	if chatMessages != nil {
-		t.Errorf("Expected chat messages to be nil, got %v", chatMessages)
-	}
-	if err.Error() != "failed to get user: entity not found" {
+		if err.Error() != "failed to get user: user not found" {
+			t.Errorf("Expected specific error message, got %s", err.Error())
+		}
 		t.Errorf("Expected specific error message, got %s", err.Error())
 	}
 }
