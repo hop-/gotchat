@@ -60,7 +60,7 @@ func buildApplication() *app.App {
 	builder.WithService(storage)
 
 	// Create a new user manager service and set it in the builder
-	userManager := services.NewUserManager(em, storage.GetUserRepository())
+	userManager := services.NewUserManager(em, storage.GetUserRepository(), storage.GetAccountRepository())
 	builder.WithService(userManager)
 
 	// Create a new connection details manager and set it in the builder

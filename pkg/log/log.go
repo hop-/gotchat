@@ -109,6 +109,10 @@ func Fatalf(format string, args ...any) {
 	printLog("FATAL", format, args...)
 
 	// Exit the program after logging fatal error
+	if level != DEBUG {
+		Close()
+		os.Exit(1)
+	}
 	panic("Fatal error occurred, exiting program")
 }
 

@@ -5,119 +5,93 @@ import (
 )
 
 type UserRepository struct {
-	StorageDb
+	Repository[User, core.User]
 }
 
 func newUserRepository(storage StorageDb) *UserRepository {
-	return &UserRepository{storage}
+	return &UserRepository{
+		newRepository[User, core.User](storage),
+	}
 }
 
-func (r *UserRepository) GetOne(id int) (*core.User, error) {
-	row := r.Db().QueryRow("SELECT id, unique_id, name, password, last_login FROM users WHERE id = ?", id)
-	if row == nil {
-		return nil, core.ErrEntityNotFound
-	}
+func (r *UserRepository) Init() error {
+	return r.Repository.Init()
+}
 
-	var u core.User
-
-	err := row.Scan(&u.Id, &u.UniqueId, &u.Name, &u.Password, &u.LastLogin)
+func (r *UserRepository) GetOne(id uint) (*core.User, error) {
+	m, err := r.getOne(id)
 	if err != nil {
 		return nil, err
 	}
 
-	return &u, nil
+	return m.ToEntity(), nil
 }
 
 func (r *UserRepository) GetOneBy(field string, value any) (*core.User, error) {
-	if !isFieldExist[core.User](field) {
+	if !core.IsFieldExist[core.User](field) {
 		return nil, core.ErrEntityFieldNotExist
 	}
-	row := r.Db().QueryRow("SELECT id, unique_id, name, password, last_login FROM users WHERE "+field+" = ?", value)
-	if row == nil {
-		return nil, core.ErrEntityNotFound
-	}
 
-	var u core.User
-	err := row.Scan(&u.Id, &u.UniqueId, &u.Name, &u.Password, &u.LastLogin)
+	m, err := r.getOneBy(field, value)
 	if err != nil {
 		return nil, err
 	}
 
-	return &u, nil
+	return m.ToEntity(), nil
 }
 
 func (r *UserRepository) GetAll() ([]*core.User, error) {
-	rows, err := queryWithRetry(r.Db(), "SELECT id, unique_id, name, password, last_login FROM users")
+	ms, err := r.getAll()
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
 
-	var users []*core.User
-	for rows.Next() {
-		var u core.User
-		err := rows.Scan(&u.Id, &u.UniqueId, &u.Name, &u.Password, &u.LastLogin)
-		if err != nil {
-			return nil, err
-		}
-		users = append(users, &u)
+	var messages []*core.User
+	for _, m := range ms {
+		messages = append(messages, m.ToEntity())
 	}
 
-	return users, nil
+	return messages, nil
 }
 
 func (r *UserRepository) GetAllBy(field string, value any) ([]*core.User, error) {
-	if !isFieldExist[core.User](field) {
+	if !core.IsFieldExist[core.User](field) {
 		return nil, core.ErrEntityFieldNotExist
 	}
 
-	rows, err := queryWithRetry(r.Db(), "SELECT id, unique_id, name, password, last_login FROM users where "+field+" = ?", value)
+	ms, err := r.getAllBy(field, value)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
 
-	var users []*core.User
-	for rows.Next() {
-		var u core.User
-		err := rows.Scan(&u.Id, &u.UniqueId, &u.Name, &u.Password, &u.LastLogin)
-		if err != nil {
-			return nil, err
-		}
-		users = append(users, &u)
+	var messages []*core.User
+	for _, m := range ms {
+		messages = append(messages, m.ToEntity())
 	}
 
-	return users, nil
+	return messages, nil
 }
 
-func (r *UserRepository) Create(user *core.User) error {
-	_, err := execWithRetry(
-		r.Db(),
-		"INSERT INTO users (unique_id, name, password, last_login) VALUES (?, ?, ?, ?)",
-		user.UniqueId,
-		user.Name,
-		user.Password,
-		user.LastLogin,
-	)
+func (r *UserRepository) Create(entity *core.User) (*core.User, error) {
+	m := FromEntityToUser(entity)
+	_, err := r.create(m)
+	if err != nil {
+		return nil, err
+	}
 
-	return err
+	return m.ToEntity(), nil
 }
 
-func (r *UserRepository) Update(user *core.User) error {
-	_, err := execWithRetry(
-		r.Db(),
-		"UPDATE users SET name = ?, password = ?, last_login = ? WHERE id = ?",
-		user.Name,
-		user.Password,
-		user.LastLogin,
-		user.Id,
-	)
+func (r *UserRepository) Update(entity *core.User) (*core.User, error) {
+	m := FromEntityToUser(entity)
+	_, err := r.update(m.Id, m)
+	if err != nil {
+		return nil, err
+	}
 
-	return err
+	return m.ToEntity(), nil
 }
 
-func (r *UserRepository) Delete(id int) error {
-	_, err := execWithRetry(r.Db(), "DELETE FROM users WHERE id = ?", id)
-
-	return err
+func (r *UserRepository) Delete(id uint) error {
+	return r.delete(id)
 }

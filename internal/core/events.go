@@ -18,8 +18,19 @@ type UserCreatedEvent struct {
 	User *User
 }
 
+type UserAccountCreatedEvent struct {
+	User    *User
+	Account *Account
+}
+
+type UserAccountUpdatedEvent struct {
+	User    *User
+	Account *Account
+}
+
 type UserLoggedInEvent struct {
-	User *User
+	User    *User
+	Account *Account
 }
 
 type UserLoggedOutEvent struct {

@@ -1,6 +1,6 @@
 .env
 .idea
-__debug_bin
+__debug_bin*
 build
 bin
 gotchat

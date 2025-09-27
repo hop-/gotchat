@@ -34,3 +34,11 @@ type MessageReadError struct {
 	ConnId string
 	Err    error
 }
+
+type ChatCreated struct {
+	ChatId string
+}
+
+type ChatActivated struct {
+	ChatId string
+}

@@ -60,17 +60,20 @@ func TestBuilder_Build(t *testing.T) {
 
 func TestBuilder_Build_MissingDependencies(t *testing.T) {
 	log.Configure().
-		Level(log.FATAL).
+		Level(log.DEBUG).
 		Init()
 	defer log.Close()
 
 	builder := NewBuilder()
 
 	defer func() {
-		if r := recover(); r == nil {
-			t.Error("Expected panic due to missing dependencies, but no panic occurred")
+		if r := recover(); r != nil {
+			// Expected panic occurred, test passes
+			return
 		}
+		t.Error("Expected panic due to missing dependencies, but no panic occurred")
 	}()
 
 	builder.Build()
+	t.Error("Expected Build() to panic, but it completed successfully")
 }

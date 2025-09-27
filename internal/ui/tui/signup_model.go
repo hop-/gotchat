@@ -1,6 +1,8 @@
 package tui
 
 import (
+	"fmt"
+
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/hop-/gotchat/internal/services"
@@ -48,15 +50,20 @@ func newSignupModel(
 	loginButton := components.NewButton("Login")
 	loginButton.SetActive(false)
 	loginButton.OnAction(func() tea.Msg {
-		user, err := userManager.CreateUser(usernameInput.Value(), passwordInput.Value())
+		user, err := userManager.CreateUser(usernameInput.Value())
 		if err != nil {
 			// TODO: handle error properly
-			return commands.ErrorMsg{Message: "An error occurred while creating the user"}
+			return commands.ErrorMsg{Message: fmt.Sprintf("An error occurred while creating the user: %s", err.Error())}
+		}
+		_, err = userManager.CreateUserAccount(user, passwordInput.Value())
+		if err != nil {
+			// TODO: handle error properly
+			return commands.ErrorMsg{Message: fmt.Sprintf("An error occurred while creating the user account: %s", err.Error())}
 		}
 
 		user, err = userManager.LoginUser(user, passwordInput.Value())
 		if err != nil {
-			return commands.ErrorMsg{Message: "An error occurred while logging in"}
+			return commands.ErrorMsg{Message: fmt.Sprintf("An error occurred while logging in: %s", err.Error())}
 		}
 
 		return commands.SetNewPageMsg{Page: newChatViewModel(user, userManager, chatManager)}

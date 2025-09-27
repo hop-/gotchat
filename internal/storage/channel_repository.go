@@ -5,116 +5,91 @@ import (
 )
 
 type ChannelRepository struct {
-	StorageDb
+	Repository[Channel, core.Channel]
 }
 
 func newChannelRepository(storage StorageDb) *ChannelRepository {
-	return &ChannelRepository{storage}
+	return &ChannelRepository{newRepository[Channel](storage)}
 }
 
-func (r *ChannelRepository) GetOne(id int) (*core.Channel, error) {
-	row := r.Db().QueryRow("SELECT id, unique_id, name FROM channels WHERE id = ?", id)
-	if row == nil {
-		return nil, core.ErrEntityNotFound
-	}
+func (r *ChannelRepository) Init() error {
+	return r.Repository.Init()
+}
 
-	var ch core.Channel
-
-	err := row.Scan(&ch.Id, &ch.UniqueId, &ch.Name)
+func (r *ChannelRepository) GetOne(id uint) (*core.Channel, error) {
+	m, err := r.getOne(id)
 	if err != nil {
 		return nil, err
 	}
 
-	return &ch, nil
+	return m.ToEntity(), nil
 }
 
 func (r *ChannelRepository) GetOneBy(field string, value any) (*core.Channel, error) {
-	if !isFieldExist[core.Channel](field) {
+	if !core.IsFieldExist[core.Channel](field) {
 		return nil, core.ErrEntityFieldNotExist
 	}
-	row := r.Db().QueryRow("SELECT id, unique_id, name FROM channels WHERE "+field+" = ?", value)
-	if row == nil {
-		return nil, core.ErrEntityNotFound
-	}
 
-	var ch core.Channel
-	err := row.Scan(&ch.Id, &ch.UniqueId, &ch.Name)
+	m, err := r.getOneBy(field, value)
 	if err != nil {
 		return nil, err
 	}
 
-	return &ch, nil
+	return m.ToEntity(), nil
 }
 
 func (r *ChannelRepository) GetAll() ([]*core.Channel, error) {
-	rows, err := queryWithRetry(r.Db(), "SELECT id, unique_id, name FROM channels")
+	ms, err := r.getAll()
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
 
-	var channels []*core.Channel
-	for rows.Next() {
-		var ch core.Channel
-		err := rows.Scan(&ch.Id, &ch.UniqueId, &ch.Name)
-		if err != nil {
-			return nil, err
-		}
-		channels = append(channels, &ch)
+	var messages []*core.Channel
+	for _, m := range ms {
+		messages = append(messages, m.ToEntity())
 	}
 
-	return channels, nil
+	return messages, nil
 }
 
 func (r *ChannelRepository) GetAllBy(field string, value any) ([]*core.Channel, error) {
-	if !isFieldExist[core.Channel](field) {
+	if !core.IsFieldExist[core.Channel](field) {
 		return nil, core.ErrEntityFieldNotExist
 	}
 
-	rows, err := queryWithRetry(r.Db(), "SELECT id, unique_id, name FROM channels where "+field+" = ?", value)
+	ms, err := r.getAllBy(field, value)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
 
-	var channels []*core.Channel
-	for rows.Next() {
-		var ch core.Channel
-		err := rows.Scan(&ch.Id, &ch.UniqueId, &ch.Name)
-		if err != nil {
-			return nil, err
-		}
-		channels = append(channels, &ch)
+	var messages []*core.Channel
+	for _, m := range ms {
+		messages = append(messages, m.ToEntity())
 	}
 
-	return channels, nil
+	return messages, nil
 }
 
-func (r *ChannelRepository) Create(channel *core.Channel) error {
-	_, err := execWithRetry(
-		r.Db(),
-		"INSERT INTO channels (unique_id, name) VALUES (?, ?)",
-		channel.UniqueId,
-		channel.Name,
-	)
+func (r *ChannelRepository) Create(entity *core.Channel) (*core.Channel, error) {
+	m := FromEntityToChannel(entity)
+	_, err := r.create(m)
+	if err != nil {
+		return nil, err
+	}
 
-	return err
+	return m.ToEntity(), nil
 }
 
-func (r *ChannelRepository) Update(channel *core.Channel) error {
-	_, err := execWithRetry(
-		r.Db(),
-		"UPDATE channels SET unique_id = ?, name = ? WHERE id = ?",
-		channel.UniqueId,
-		channel.Name,
-		channel.Id,
-	)
+func (r *ChannelRepository) Update(entity *core.Channel) (*core.Channel, error) {
+	m := FromEntityToChannel(entity)
+	_, err := r.update(m.Id, m)
+	if err != nil {
+		return nil, err
+	}
 
-	return err
+	return m.ToEntity(), nil
 }
 
-func (r *ChannelRepository) Delete(id int) error {
-	_, err := execWithRetry(r.Db(), "DELETE FROM channels WHERE id = ?", id)
-
-	return err
+func (r *ChannelRepository) Delete(id uint) error {
+	return r.delete(id)
 }
