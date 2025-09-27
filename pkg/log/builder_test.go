@@ -81,3 +81,40 @@ func TestLogBuilder_WithoutTimestamps(t *testing.T) {
 		t.Fatal("Expected formatLogMessageFn to be set")
 	}
 }
+func TestLogBuilder_WithCustomFormat(t *testing.T) {
+	// Test setting custom format function
+	builder := Configure()
+
+	customFormatter := func(level int, message string, params ...any) string {
+		return "CUSTOM: " + message
+	}
+
+	result := builder.WithCustomFormat(customFormatter)
+
+	if result == nil {
+		t.Error("Expected WithCustomFormat to return LogBuilder, got nil")
+	}
+
+	if result != builder {
+		t.Error("Expected WithCustomFormat to return the same builder instance")
+	}
+}
+
+func TestLogBuilder_WithCustomFormat_NilFunction(t *testing.T) {
+	// Test setting nil custom format function
+	builder := Configure()
+
+	result := builder.WithCustomFormat(nil)
+
+	if result == nil {
+		t.Error("Expected WithCustomFormat to return LogBuilder even with nil function, got nil")
+	}
+
+	if result != builder {
+		t.Error("Expected WithCustomFormat to return the same builder instance")
+	}
+
+	if builder.logInstance.formatLogMessageFn == nil {
+		t.Error("Expected formatLogMessageFn to remain unchanged when nil function is provided")
+	}
+}

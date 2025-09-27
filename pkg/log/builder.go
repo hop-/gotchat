@@ -2,6 +2,8 @@ package log
 
 import "os"
 
+type FormatFunc func(level int, message string, args ...any) string
+
 type LogBuilder struct {
 	logInstance *logger
 	level       int
@@ -54,6 +56,15 @@ func (b *LogBuilder) Level(l int) *LogBuilder {
 		return nil // Invalid log level
 	}
 	b.level = l
+
+	return b
+}
+
+func (b *LogBuilder) WithCustomFormat(f FormatFunc) *LogBuilder {
+	if f == nil {
+		return b // No change if nil function provided
+	}
+	b.logInstance.formatLogMessageFn = f
 
 	return b
 }

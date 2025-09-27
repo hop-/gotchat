@@ -21,7 +21,15 @@ const (
 	DEBUG
 )
 
-type fmtFunc func(string, string, ...any) string
+var (
+	typeToStr = map[int]string{
+		FATAL: "FATAL",
+		ERROR: "ERROR",
+		WARN:  "WARN ",
+		INFO:  "INFO ",
+		DEBUG: "DEBUG",
+	}
+)
 
 type logger struct {
 	mx                 sync.Mutex
@@ -29,23 +37,27 @@ type logger struct {
 	inMemory           bool
 	stdOut             bool
 	logStrs            []string
-	formatLogMessageFn fmtFunc
+	formatLogMessageFn FormatFunc
 }
 
 func (l *logger) init() error {
 	return nil
 }
 
-func formatLogMessageWithTime(typeStr string, format string, args ...any) string {
+func formatLogMessageWithTime(messageType int, format string, args ...any) string {
+	typeStr := typeToStr[messageType]
+
 	return fmt.Sprintf("%s [%s]: ", typeStr, time.Now().Format("2006-01-02 15:04:05.000")) + fmt.Sprintf(format, args...)
 }
 
-func formatLogMessageWithoutTime(typeStr string, format string, args ...any) string {
+func formatLogMessageWithoutTime(messageType int, format string, args ...any) string {
+	typeStr := typeToStr[messageType]
+
 	return typeStr + ": " + fmt.Sprintf(format, args...)
 }
 
-func printLog(typeStr string, format string, args ...any) {
-	logStr := logInstance.formatLogMessageFn(typeStr, format, args...)
+func printLog(messageType int, format string, args ...any) {
+	logStr := logInstance.formatLogMessageFn(messageType, format, args...)
 
 	// add newline at the end if not already present
 	if len(logStr) > 0 && logStr[len(logStr)-1] != '\n' {
@@ -74,7 +86,7 @@ func Infof(format string, args ...any) {
 		return
 	}
 
-	printLog("INFO ", format, args...)
+	printLog(INFO, format, args...)
 }
 
 func Warnf(format string, args ...any) {
@@ -82,7 +94,7 @@ func Warnf(format string, args ...any) {
 		return
 	}
 
-	printLog("WARN ", format, args...)
+	printLog(WARN, format, args...)
 }
 
 func Errorf(format string, args ...any) {
@@ -90,7 +102,7 @@ func Errorf(format string, args ...any) {
 		return
 	}
 
-	printLog("ERROR", format, args...)
+	printLog(ERROR, format, args...)
 }
 
 func Debugf(format string, args ...any) {
@@ -98,7 +110,7 @@ func Debugf(format string, args ...any) {
 		return
 	}
 
-	printLog("DEBUG", format, args...)
+	printLog(DEBUG, format, args...)
 }
 
 func Fatalf(format string, args ...any) {
@@ -106,7 +118,7 @@ func Fatalf(format string, args ...any) {
 		return
 	}
 
-	printLog("FATAL", format, args...)
+	printLog(FATAL, format, args...)
 
 	// Exit the program after logging fatal error
 	if level != DEBUG {
