@@ -46,7 +46,16 @@ type ActivateOrCreateChat struct {
 func (a *ActivateOrCreateChat) Execute(ctx context.Context) ([]core.Event, error) {
 	var events []core.Event
 
-	// Implementation for activating or creating a chat
+	user, err := a.cm.userManager.GetUserByUniqueId(a.userId)
+	if err != nil && err != core.ErrEntityNotFound {
+		return nil, err
+	}
+
+	if user == nil {
+		// TODO: Create a new user with all necessary fields
+	}
+
+	// TODO: Implementation for activating or creating a chat
 
 	return events, nil
 }
